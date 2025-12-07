@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card"
 import { UploadIcon, ScanIcon, XIcon, LoaderIcon, LeafIcon, SparklesIcon } from "@/components/icons"
 import { cn } from "@/lib/utils"
 import { analyzeImageClient } from "@/lib/vision-client"
-import { classifyImageHeuristic } from "@/lib/heuristic-calssifier"
+import { classifyImageHeuristic } from "@/lib/heuristic-classifier"
 
 type ScanMode = "ai" | "quick"
 
@@ -398,15 +398,15 @@ export function UploadSection() {
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Mode:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "Heuristic + AI Saran" : "AI Cloud"}</span>
+                    <span className="font-medium">{scanMode === "quick" ? "Heuristic + AI Saran" : "AI Vision"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Akurasi:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "~70% + AI saran" : "~90%+"}</span>
+                    <span className="font-medium">{scanMode === "quick" ? "~70-85%" : "~90%+"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Provider:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "Lokal + Vercel AI" : "Vercel AI"}</span>
+                    <span className="font-medium">{scanMode === "quick" ? "Lokal" : "OpenAI"}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>

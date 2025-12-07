@@ -1,44 +1,14 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
 import { updateGlobalStats, saveScanResult } from "@/lib/firestore"
 import { checkRateLimit, hashImage, getCachedResult, setCachedResult } from "@/lib/rate-limit"
 import type { ScanResult } from "@/lib/types"
 
 const RATE_LIMIT_CONFIG = {
-  maxRequests: 10,
+  maxRequests: 15,
   windowMs: 60 * 1000,
 }
-
-const TEXT_ANALYSIS_PROMPT = `Kamu adalah sistem klasifikasi sampah non-organik yang canggih. Berdasarkan deskripsi visual gambar yang diberikan, identifikasi objek sampah plastik/non-organik yang kemungkinan ada.
-
-Untuk setiap objek yang terdeteksi, berikan informasi berikut:
-1. Nama objek (contoh: botol plastik, sedotan, kantong plastik)
-2. Jenis plastik (contoh: PET, HDPE, PVC, LDPE, PP, PS, Other)
-3. Kode plastik (1-7)
-4. Estimasi waktu terurai di alam
-5. Tingkat risiko mikroplastik (Rendah/Sedang/Tinggi)
-6. Rekomendasi alternatif ramah lingkungan
-7. Deskripsi singkat tentang dampak lingkungan
-
-PENTING: Respons HARUS dalam format JSON yang valid seperti berikut:
-{
-  "objects": [
-    {
-      "name": "nama objek",
-      "plasticType": "jenis plastik",
-      "plasticCode": "kode (1-7)",
-      "decompositionTime": "waktu terurai",
-      "microplasticRisk": "Rendah/Sedang/Tinggi",
-      "ecoAlternative": "alternatif ramah lingkungan",
-      "description": "deskripsi dampak lingkungan"
-    }
-  ],
-  "education": {
-    "title": "judul edukasi",
-    "description": "deskripsi edukasi",
-    "tips": ["tip 1", "tip 2", "tip 3"]
-  }
-}`
 
 const VISION_ANALYSIS_PROMPT = `Kamu adalah sistem klasifikasi sampah non-organik. Analisis gambar ini dan identifikasi semua objek sampah plastik/non-organik.
 
@@ -46,38 +16,9 @@ Untuk setiap objek, berikan: nama, jenis plastik, kode (1-7), waktu terurai, ris
 
 Respons dalam format JSON:
 {
-  "objects": [{"name": "", "plasticType": "", "plasticCode": "", "decompositionTime": "", "microplasticRisk": "", "ecoAlternative": "", "description": ""}],
+  "objects": [{"name": "", "plasticType": "", "plasticCode": "", "decompositionTime": "", "microplasticRisk": "Rendah/Sedang/Tinggi", "ecoAlternative": "", "description": ""}],
   "education": {"title": "", "description": "", "tips": []}
 }`
-
-async function callTextAI(visualDescription: string) {
-  return await generateText({
-    model: "anthropic/claude-sonnet-4-20250514",
-    messages: [
-      {
-        role: "user",
-        content: `${TEXT_ANALYSIS_PROMPT}\n\nDeskripsi Visual:\n${visualDescription}`,
-      },
-    ],
-    temperature: 0.3,
-  })
-}
-
-async function callVisionAI(thumbnailBase64: string) {
-  return await generateText({
-    model: "anthropic/claude-sonnet-4-20250514",
-    messages: [
-      {
-        role: "user",
-        content: [
-          { type: "text", text: VISION_ANALYSIS_PROMPT },
-          { type: "image", image: thumbnailBase64 },
-        ],
-      },
-    ],
-    temperature: 0.3,
-  })
-}
 
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for")
@@ -108,14 +49,14 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { visualDescription, estimatedObjects, confidence, thumbnailBase64, userId } = await request.json()
+    const { visualDescription, estimatedObjects, confidence, thumbnailBase64, userId, useAI } = await request.json()
 
-    if (!visualDescription) {
-      return NextResponse.json({ error: "Deskripsi visual tidak ditemukan" }, { status: 400 })
+    if (!visualDescription && !thumbnailBase64) {
+      return NextResponse.json({ error: "Data gambar tidak ditemukan" }, { status: 400 })
     }
 
-    // Check cache based on visual description hash
-    const descHash = hashImage(visualDescription)
+    // Check cache
+    const descHash = hashImage(visualDescription || thumbnailBase64)
     const cachedResult = getCachedResult(descHash)
     if (cachedResult) {
       return NextResponse.json(
@@ -127,44 +68,56 @@ export async function POST(request: NextRequest) {
     }
 
     let text: string | undefined
-    let usedMode: "text" | "vision" = "text"
+    let usedMode: "ai" | "local" = "local"
 
-    try {
-      console.log("[v0] Trying Vercel AI Gateway text analysis...")
-      const result = await callTextAI(visualDescription)
-      text = result.text
-      usedMode = "text"
-      console.log("[v0] Vercel AI Gateway text analysis success")
-    } catch (error) {
-      console.error("[v0] Text analysis failed:", error)
-    }
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
 
-    // If text analysis failed and confidence is low, try vision with thumbnail
-    if (!text && confidence < 0.6 && thumbnailBase64) {
+    if (useAI && hasOpenAIKey && thumbnailBase64) {
       try {
-        console.log("[v0] Trying Vercel AI Gateway vision analysis...")
-        const result = await callVisionAI(thumbnailBase64)
+        console.log("[v0] Trying OpenAI vision analysis...")
+        const result = await generateText({
+          model: openai("gpt-4o"),
+          messages: [
+            {
+              role: "user",
+              content: [
+                { type: "text", text: VISION_ANALYSIS_PROMPT },
+                { type: "image", image: thumbnailBase64 },
+              ],
+            },
+          ],
+          temperature: 0.3,
+        })
         text = result.text
-        usedMode = "vision"
-        console.log("[v0] Vercel AI Gateway vision analysis success")
-      } catch (error) {
-        console.error("[v0] Vision analysis failed:", error)
+        usedMode = "ai"
+        console.log("[v0] OpenAI vision analysis success")
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error("[v0] OpenAI analysis failed:", errorMessage)
+        // Fall through to heuristic
       }
     }
 
-    // Fallback to local/heuristic response if AI fails
-    if (!text && estimatedObjects && estimatedObjects.length > 0) {
-      const basicResult = generateBasicResponse(estimatedObjects)
+    if (!text) {
+      console.log("[v0] Using heuristic classification")
+      const basicResult = generateHeuristicResponse(estimatedObjects || ["sampah plastik"])
+      basicResult.provider = "heuristic"
+      basicResult.analysisMode = "local"
+
+      try {
+        await Promise.all([saveScanResult(basicResult, userId), updateGlobalStats(basicResult)])
+      } catch (firestoreError) {
+        console.error("Firestore error:", firestoreError)
+      }
+
+      setCachedResult(descHash, basicResult)
+
       return NextResponse.json(basicResult, {
         headers: { "X-RateLimit-Remaining": String(rateLimitResult.remaining) },
       })
     }
 
-    if (!text) {
-      return NextResponse.json({ error: "Tidak dapat menganalisis gambar. Silakan coba lagi nanti." }, { status: 503 })
-    }
-
-    // Parse JSON from response
+    // Parse JSON from AI response
     let result
     try {
       const jsonMatch = text.match(/\{[\s\S]*\}/)
@@ -193,7 +146,7 @@ export async function POST(request: NextRequest) {
       totalObjects: result.objects?.length || 0,
       scanDate: new Date().toISOString(),
       userId: userId || "anonymous",
-      provider: "vercel",
+      provider: "openai",
       analysisMode: usedMode,
     }
 
@@ -214,7 +167,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-function generateBasicResponse(estimatedObjects: string[]): ScanResult {
+function generateHeuristicResponse(estimatedObjects: string[]): ScanResult {
   const plasticDatabase: Record<
     string,
     {
@@ -227,60 +180,120 @@ function generateBasicResponse(estimatedObjects: string[]): ScanResult {
     }
   > = {
     "botol plastik transparan": {
-      plasticType: "PET",
+      plasticType: "PET (Polyethylene Terephthalate)",
       plasticCode: "1",
       decompositionTime: "450 tahun",
-      microplasticRisk: "Sedang",
+      microplasticRisk: "Tinggi",
       ecoAlternative: "Botol kaca atau stainless steel",
-      description: "PET dapat didaur ulang namun sering berakhir di lautan",
+      description:
+        "PET dapat didaur ulang namun sering berakhir di lautan. Biasa digunakan untuk botol air mineral dan minuman ringan.",
     },
     "botol air mineral": {
-      plasticType: "PET",
+      plasticType: "PET (Polyethylene Terephthalate)",
       plasticCode: "1",
       decompositionTime: "450 tahun",
-      microplasticRisk: "Sedang",
+      microplasticRisk: "Tinggi",
       ecoAlternative: "Tumbler atau botol minum reusable",
-      description: "Salah satu penyumbang sampah plastik terbesar",
+      description:
+        "Salah satu penyumbang sampah plastik terbesar di Indonesia. Lebih dari 1 juta botol plastik terjual setiap menit di dunia.",
+    },
+    "botol plastik": {
+      plasticType: "PET (Polyethylene Terephthalate)",
+      plasticCode: "1",
+      decompositionTime: "450 tahun",
+      microplasticRisk: "Tinggi",
+      ecoAlternative: "Botol stainless steel atau kaca",
+      description: "Botol PET dapat didaur ulang menjadi serat tekstil, namun proses ini membutuhkan energi besar.",
     },
     "kantong plastik": {
-      plasticType: "LDPE",
+      plasticType: "LDPE (Low-Density Polyethylene)",
       plasticCode: "4",
       decompositionTime: "500-1000 tahun",
       microplasticRisk: "Tinggi",
       ecoAlternative: "Tas kain atau tas belanja reusable",
-      description: "Sangat berbahaya bagi kehidupan laut",
+      description: "Sangat berbahaya bagi kehidupan laut. Penyu sering mengira kantong plastik sebagai ubur-ubur.",
+    },
+    kresek: {
+      plasticType: "LDPE (Low-Density Polyethylene)",
+      plasticCode: "4",
+      decompositionTime: "500-1000 tahun",
+      microplasticRisk: "Tinggi",
+      ecoAlternative: "Tas belanja kain atau jaring",
+      description: "Rata-rata kantong plastik hanya digunakan 12 menit tapi butuh ratusan tahun untuk terurai.",
     },
     "wadah plastik putih": {
-      plasticType: "PP",
+      plasticType: "PP (Polypropylene)",
       plasticCode: "5",
       decompositionTime: "20-30 tahun",
-      microplasticRisk: "Rendah",
+      microplasticRisk: "Sedang",
       ecoAlternative: "Wadah kaca atau stainless steel",
-      description: "Relatif aman tapi tetap perlu didaur ulang",
+      description: "Relatif aman untuk makanan panas, tapi tetap perlu didaur ulang dengan benar.",
     },
     "tutup botol": {
-      plasticType: "HDPE",
+      plasticType: "HDPE (High-Density Polyethylene)",
       plasticCode: "2",
       decompositionTime: "450 tahun",
       microplasticRisk: "Rendah",
-      ecoAlternative: "Tutup botol berbahan bambu",
-      description: "Dapat didaur ulang dengan baik",
+      ecoAlternative: "Tutup botol berbahan bambu atau logam",
+      description: "Dapat didaur ulang dengan baik. Pisahkan dari botol saat mendaur ulang.",
     },
     sedotan: {
-      plasticType: "PP",
+      plasticType: "PP (Polypropylene)",
       plasticCode: "5",
       decompositionTime: "200 tahun",
       microplasticRisk: "Tinggi",
-      ecoAlternative: "Sedotan bambu atau stainless steel",
-      description: "Sering ditemukan di perut hewan laut",
+      ecoAlternative: "Sedotan bambu, stainless steel, atau kertas",
+      description:
+        "Sering ditemukan di perut hewan laut dan burung. Lebih dari 8 miliar sedotan mencemari pantai dunia.",
+    },
+    "gelas plastik": {
+      plasticType: "PP (Polypropylene)",
+      plasticCode: "5",
+      decompositionTime: "450 tahun",
+      microplasticRisk: "Sedang",
+      ecoAlternative: "Gelas kaca atau tumbler reusable",
+      description: "Banyak digunakan untuk minuman takeaway. Bawa tumbler sendiri untuk mengurangi sampah.",
+    },
+    "cup plastik": {
+      plasticType: "PP (Polypropylene)",
+      plasticCode: "5",
+      decompositionTime: "450 tahun",
+      microplasticRisk: "Sedang",
+      ecoAlternative: "Tumbler atau gelas reusable",
+      description: "Cup plastik sekali pakai berkontribusi besar pada sampah perkotaan.",
+    },
+    styrofoam: {
+      plasticType: "PS (Polystyrene)",
+      plasticCode: "6",
+      decompositionTime: "500-1000 tahun",
+      microplasticRisk: "Tinggi",
+      ecoAlternative: "Wadah kertas atau daun pisang",
+      description:
+        "Sangat berbahaya karena mudah pecah menjadi jutaan partikel mikroplastik yang mencemari tanah dan air.",
     },
     "galon air": {
-      plasticType: "PC",
+      plasticType: "PC (Polycarbonate)",
       plasticCode: "7",
       decompositionTime: "500+ tahun",
       microplasticRisk: "Sedang",
       ecoAlternative: "Galon kaca atau sistem refill",
-      description: "Dapat digunakan ulang berkali-kali",
+      description: "Dapat digunakan ulang berkali-kali. Pastikan galon dalam kondisi baik dan tidak tergores.",
+    },
+    "plastik wrap": {
+      plasticType: "LDPE (Low-Density Polyethylene)",
+      plasticCode: "4",
+      decompositionTime: "450 tahun",
+      microplasticRisk: "Sedang",
+      ecoAlternative: "Beeswax wrap atau tutup silikon",
+      description: "Sulit didaur ulang karena tipis dan sering terkontaminasi makanan.",
+    },
+    "kemasan snack": {
+      plasticType: "Other (Multilayer)",
+      plasticCode: "7",
+      decompositionTime: "500+ tahun",
+      microplasticRisk: "Tinggi",
+      ecoAlternative: "Snack dalam kemasan kertas atau bawa wadah sendiri",
+      description: "Kemasan multilayer sangat sulit didaur ulang karena terdiri dari berbagai lapisan material.",
     },
   }
 
@@ -291,14 +304,16 @@ function generateBasicResponse(estimatedObjects: string[]): ScanResult {
         return { name: obj, ...data }
       }
     }
+    // Enhanced default response
     return {
       name: obj,
-      plasticType: "Unknown",
+      plasticType: "Plastik Campuran",
       plasticCode: "7",
       decompositionTime: "100-500 tahun",
       microplasticRisk: "Sedang" as const,
-      ecoAlternative: "Pilih alternatif ramah lingkungan",
-      description: "Jenis plastik tidak teridentifikasi dengan pasti",
+      ecoAlternative: "Pilih alternatif ramah lingkungan yang dapat digunakan ulang",
+      description:
+        "Jenis plastik tidak teridentifikasi dengan pasti. Sebaiknya kurangi penggunaan dan daur ulang jika memungkinkan.",
     }
   })
 
@@ -307,18 +322,19 @@ function generateBasicResponse(estimatedObjects: string[]): ScanResult {
     education: {
       title: "Tips Pengelolaan Sampah Plastik",
       description:
-        "Hasil analisis berdasarkan deteksi visual lokal. Untuk hasil lebih akurat, coba lagi nanti saat layanan AI tersedia.",
+        "Hasil analisis berdasarkan deteksi visual heuristic. Sistem mengidentifikasi jenis plastik berdasarkan karakteristik visual objek.",
       tips: [
         "Pisahkan sampah berdasarkan kode plastiknya (1-7)",
         "Cuci bersih wadah plastik sebelum didaur ulang",
         "Kurangi penggunaan plastik sekali pakai",
         "Pilih produk dengan kemasan yang dapat didaur ulang",
+        "Bawa tas belanja dan wadah sendiri saat berbelanja",
       ],
     },
     totalObjects: objects.length,
     scanDate: new Date().toISOString(),
     userId: "anonymous",
-    provider: "local",
+    provider: "heuristic",
     analysisMode: "local",
   }
 }

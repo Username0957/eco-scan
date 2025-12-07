@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { generateText } from "ai"
+import { openai } from "@ai-sdk/openai"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 const RATE_LIMIT_CONFIG = {
@@ -7,7 +8,7 @@ const RATE_LIMIT_CONFIG = {
   windowMs: 60 * 1000,
 }
 
-const SUGGESTION_PROMPT = `Kamu adalah ahli lingkungan dan daur ulang plastik. Berdasarkan jenis plastik yang diberikan, berikan saran DETAIL yang personal dan bermanfaat.
+const SUGGESTION_PROMPT = `Kamu adalah ahli lingkungan dan daur ulang plastik Indonesia. Berdasarkan jenis plastik yang diberikan, berikan saran DETAIL yang personal dan bermanfaat untuk konteks Indonesia.
 
 Format respons (JSON):
 {
@@ -16,8 +17,8 @@ Format respons (JSON):
       "name": "nama alternatif",
       "description": "deskripsi lengkap",
       "benefits": ["benefit 1", "benefit 2"],
-      "whereToGet": "tempat mendapatkannya",
-      "priceRange": "kisaran harga"
+      "whereToGet": "tempat mendapatkannya di Indonesia",
+      "priceRange": "kisaran harga dalam Rupiah"
     }
   ],
   "disposalTips": [
@@ -66,7 +67,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Jenis plastik tidak ditemukan" }, { status: 400 })
     }
 
-    const userQuery = `Berikan saran detail untuk:
+    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
+
+    if (hasOpenAIKey) {
+      const userQuery = `Berikan saran detail untuk:
 - Jenis Plastik: ${plasticType}
 - Kode Plastik: ${plasticCode}
 - Objek: ${objectName}
@@ -74,51 +78,46 @@ export async function POST(request: NextRequest) {
 
 Berikan saran yang lebih spesifik, kreatif, dan mudah diterapkan di Indonesia.`
 
-    let text: string | undefined
+      try {
+        const result = await generateText({
+          model: openai("gpt-4o-mini"),
+          messages: [{ role: "user", content: `${SUGGESTION_PROMPT}\n\n${userQuery}` }],
+          temperature: 0.7,
+        })
 
-    try {
-      const result = await generateText({
-        model: "anthropic/claude-sonnet-4-20250514",
-        messages: [{ role: "user", content: `${SUGGESTION_PROMPT}\n\n${userQuery}` }],
-        temperature: 0.7,
-      })
-      text = result.text
-    } catch (error) {
-      console.error("Vercel AI Gateway suggestion failed:", error)
-    }
+        // Parse JSON response
+        let parsedResult
+        try {
+          const jsonMatch = result.text.match(/\{[\s\S]*\}/)
+          if (jsonMatch) {
+            parsedResult = JSON.parse(jsonMatch[0])
+          } else {
+            throw new Error("No JSON found")
+          }
+        } catch {
+          // Fall through to default
+          parsedResult = null
+        }
 
-    if (!text) {
-      // Fallback ke saran default yang detail
-      return NextResponse.json({
-        detailedAlternatives: getDefaultAlternatives(plasticType),
-        disposalTips: getDefaultDisposalTips(plasticType),
-        environmentalImpact: getDefaultImpact(plasticType),
-        localInfo: getDefaultLocalInfo(),
-        provider: "local",
-      })
-    }
-
-    // Parse JSON response
-    let result
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error("No JSON found")
-      }
-    } catch {
-      result = {
-        detailedAlternatives: getDefaultAlternatives(plasticType),
-        disposalTips: getDefaultDisposalTips(plasticType),
-        environmentalImpact: getDefaultImpact(plasticType),
-        localInfo: getDefaultLocalInfo(),
+        if (parsedResult) {
+          return NextResponse.json({
+            ...parsedResult,
+            provider: "openai",
+          })
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.error("OpenAI suggestion failed:", errorMessage)
+        // Fall through to default response
       }
     }
 
     return NextResponse.json({
-      ...result,
-      provider: "vercel",
+      detailedAlternatives: getDefaultAlternatives(plasticType),
+      disposalTips: getDefaultDisposalTips(plasticType),
+      environmentalImpact: getDefaultImpact(plasticType),
+      localInfo: getDefaultLocalInfo(),
+      provider: "local",
     })
   } catch (error) {
     console.error("Suggestions API Error:", error)
@@ -131,7 +130,7 @@ function getDefaultAlternatives(plasticType: string) {
     string,
     Array<{ name: string; description: string; benefits: string[]; whereToGet: string; priceRange: string }>
   > = {
-    PET: [
+    "PET (Polyethylene Terephthalate)": [
       {
         name: "Botol Tumbler Stainless Steel",
         description: "Botol minum berbahan stainless steel food grade yang tahan lama dan tidak mengandung BPA",
@@ -141,23 +140,23 @@ function getDefaultAlternatives(plasticType: string) {
           "Mudah dibersihkan",
           "Menjaga suhu minuman",
         ],
-        whereToGet: "Tokopedia, Shopee, atau toko peralatan dapur",
+        whereToGet: "Tokopedia, Shopee, IKEA, atau toko peralatan dapur",
         priceRange: "Rp 50.000 - Rp 300.000",
       },
       {
         name: "Botol Kaca dengan Sleeve",
         description: "Botol kaca dengan pelindung silikon atau kain untuk mencegah pecah",
         benefits: ["100% bebas plastik", "Tidak menyerap bau", "Mudah dicuci", "Estetik"],
-        whereToGet: "IKEA, ACE Hardware, atau marketplace",
+        whereToGet: "IKEA, ACE Hardware, atau marketplace online",
         priceRange: "Rp 30.000 - Rp 150.000",
       },
     ],
-    LDPE: [
+    "LDPE (Low-Density Polyethylene)": [
       {
         name: "Tas Belanja Kanvas",
         description: "Tas belanja berbahan kanvas tebal yang dapat dilipat dan dicuci",
         benefits: ["Dapat digunakan 1000+ kali", "Mudah dilipat", "Dapat dicuci mesin", "Kuat menahan beban berat"],
-        whereToGet: "Miniso, toko kelontong, atau buat sendiri",
+        whereToGet: "Miniso, Pasar tradisional, atau toko online eco-friendly",
         priceRange: "Rp 15.000 - Rp 75.000",
       },
       {
@@ -168,7 +167,23 @@ function getDefaultAlternatives(plasticType: string) {
         priceRange: "Rp 10.000 - Rp 50.000",
       },
     ],
-    PS: [
+    "PP (Polypropylene)": [
+      {
+        name: "Sedotan Stainless Steel Set",
+        description: "Set sedotan stainless steel dengan sikat pembersih dan pouch",
+        benefits: ["Dapat digunakan seumur hidup", "Mudah dibersihkan", "Portable", "Berbagai ukuran tersedia"],
+        whereToGet: "Tokopedia, Shopee, atau toko eco-friendly",
+        priceRange: "Rp 15.000 - Rp 50.000",
+      },
+      {
+        name: "Sedotan Bambu",
+        description: "Sedotan dari bambu alami yang biodegradable",
+        benefits: ["100% alami", "Biodegradable", "Ringan", "Aesthetic"],
+        whereToGet: "Toko kerajinan atau online marketplace",
+        priceRange: "Rp 5.000 - Rp 25.000",
+      },
+    ],
+    "PS (Polystyrene)": [
       {
         name: "Wadah Makanan Bambu",
         description: "Wadah makanan dari serat bambu yang biodegradable",
@@ -184,9 +199,25 @@ function getDefaultAlternatives(plasticType: string) {
         priceRange: "Rp 75.000 - Rp 250.000",
       },
     ],
+    "HDPE (High-Density Polyethylene)": [
+      {
+        name: "Wadah Kaca dengan Tutup Bambu",
+        description: "Wadah penyimpanan kaca dengan tutup dari bambu",
+        benefits: ["Tahan lama", "Tidak menyerap bau", "Estetik", "Ramah lingkungan"],
+        whereToGet: "IKEA, ACE Hardware, atau toko online",
+        priceRange: "Rp 50.000 - Rp 200.000",
+      },
+    ],
   }
 
-  return alternatives[plasticType] || alternatives["PET"]
+  // Find matching key or return default
+  for (const [key, value] of Object.entries(alternatives)) {
+    if (plasticType.includes(key) || key.includes(plasticType)) {
+      return value
+    }
+  }
+
+  return alternatives["PET (Polyethylene Terephthalate)"]
 }
 
 function getDefaultDisposalTips(plasticType: string) {
@@ -204,9 +235,28 @@ function getDefaultDisposalTips(plasticType: string) {
       { step: "Lipat rapi", description: "Lipat rapi untuk menghemat tempat" },
       { step: "Kumpulkan", description: "Kumpulkan minimal 1kg sebelum disetor ke bank sampah" },
     ],
+    PP: [
+      { step: "Bersihkan", description: "Cuci bersih dari sisa makanan" },
+      { step: "Keringkan", description: "Pastikan benar-benar kering" },
+      { step: "Pisahkan", description: "Pisahkan dari jenis plastik lain" },
+      { step: "Setor", description: "Setor ke bank sampah atau tempat daur ulang" },
+    ],
+    PS: [
+      { step: "Jangan hancurkan", description: "Jangan remukkan styrofoam karena akan menyebar sebagai mikroplastik" },
+      { step: "Simpan utuh", description: "Simpan dalam keadaan utuh jika memungkinkan" },
+      { step: "Cari dropbox", description: "Cari dropbox khusus styrofoam (masih jarang di Indonesia)" },
+      { step: "Hindari", description: "Untuk ke depannya, hindari penggunaan styrofoam" },
+    ],
   }
 
-  return tips[plasticType] || tips["PET"]
+  // Find matching key
+  for (const [key, value] of Object.entries(tips)) {
+    if (plasticType.includes(key)) {
+      return value
+    }
+  }
+
+  return tips["PET"]
 }
 
 function getDefaultImpact(plasticType: string) {
@@ -223,6 +273,11 @@ function getDefaultImpact(plasticType: string) {
       solution: "Menggunakan tas belanja reusable dapat mengurangi 500+ kantong plastik per orang per tahun",
       funFact: "Rata-rata kantong plastik hanya digunakan selama 12 menit tapi butuh 500-1000 tahun untuk terurai",
     },
+    PP: {
+      problem: "Sedotan dan wadah PP sering ditemukan di dalam tubuh hewan laut dan burung",
+      solution: "Membawa sedotan dan wadah sendiri dapat mengurangi sampah plastik secara signifikan",
+      funFact: "Lebih dari 8 miliar sedotan plastik mencemari pantai di seluruh dunia setiap tahun",
+    },
     PS: {
       problem: "Styrofoam tidak dapat didaur ulang dan akan pecah menjadi jutaan partikel mikroplastik",
       solution: "Membawa wadah makanan sendiri saat membeli makanan dapat mengurangi 90% sampah styrofoam personal",
@@ -230,14 +285,21 @@ function getDefaultImpact(plasticType: string) {
     },
   }
 
-  return impacts[plasticType] || impacts["PET"]
+  // Find matching key
+  for (const [key, value] of Object.entries(impacts)) {
+    if (plasticType.includes(key)) {
+      return value
+    }
+  }
+
+  return impacts["PET"]
 }
 
 function getDefaultLocalInfo() {
   return {
     recyclingLocations:
-      "Cari 'Bank Sampah' terdekat melalui aplikasi atau website dinas lingkungan hidup kotamu. Beberapa supermarket seperti Alfamart dan Indomaret juga menerima botol plastik.",
+      "Cari 'Bank Sampah' terdekat melalui aplikasi atau website dinas lingkungan hidup kotamu. Beberapa supermarket seperti Alfamart dan Indomaret juga menerima botol plastik. Di Jakarta, kamu bisa menggunakan aplikasi 'Waste4Change' untuk penjemputan sampah.",
     communityTips:
-      "Bergabunglah dengan komunitas zero waste lokal seperti Indonesia Bebas Sampah atau Gerakan Indonesia Diet Kantong Plastik untuk tips dan motivasi.",
+      "Bergabunglah dengan komunitas zero waste lokal seperti Indonesia Bebas Sampah, Gerakan Indonesia Diet Kantong Plastik, atau Zero Waste Indonesia untuk tips dan motivasi. Ikuti juga akun @waste4change dan @zerowaste.id di Instagram.",
   }
 }

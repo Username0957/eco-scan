@@ -21,8 +21,8 @@ export interface ScanResult {
   totalObjects: number
   scanDate: string
   userId?: string
-  provider?: "openai" | "gemini" | "local"
-  analysisMode?: "text" | "vision" | "local"
+  provider?: "openai" | "gemini" | "local" | "heuristic"
+  analysisMode?: "text" | "vision" | "local" | "heuristic";
 }
 
 export interface GlobalStats {
