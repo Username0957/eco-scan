@@ -1,0 +1,82 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ============================================
+    // GLOBAL STATISTICS
+    // ============================================
+    match /global/statistics {
+      // Semua user bisa membaca statistik global
+      allow read: if true;
+      
+      // Hanya server/authenticated user yang bisa update
+      // Untuk development, izinkan semua write
+      // Untuk production, ganti dengan: allow write: if request.auth != null;
+      allow write: if true;
+    }
+    
+    // ============================================
+    // SCAN RESULTS
+    // ============================================
+    match /scans/{scanId} {
+      // Semua user bisa membaca hasil scan (untuk statistik publik)
+      allow read: if true;
+      
+      // Semua user bisa membuat scan baru
+      allow create: if true;
+      
+      // Hanya pemilik scan yang bisa update/delete
+      // Untuk anonymous user, izinkan semua
+      allow update, delete: if resource.data.userId == 'anonymous' 
+                            || resource.data.userId == request.auth.uid;
+    }
+    
+    // ============================================
+    // USER STATISTICS
+    // ============================================
+    match /userStats/{userId} {
+      // User hanya bisa membaca statistik miliknya sendiri
+      // Anonymous user bisa membaca statistik anonymous
+      allow read: if userId == 'anonymous' 
+                  || (request.auth != null && request.auth.uid == userId);
+      
+      // User hanya bisa menulis statistik miliknya sendiri
+      allow write: if userId == 'anonymous' 
+                   || (request.auth != null && request.auth.uid == userId);
+    }
+    
+    // ============================================
+    // PLASTIC CATEGORIES (Read-only reference data)
+    // ============================================
+    match /plasticCategories/{categoryId} {
+      // Semua user bisa membaca data kategori plastik
+      allow read: if true;
+      
+      // Hanya admin yang bisa menulis (untuk sekarang disabled)
+      allow write: if false;
+    }
+    
+    // ============================================
+    // EDUCATION CONTENT (Read-only reference data)
+    // ============================================
+    match /education/{docId} {
+      // Semua user bisa membaca konten edukasi
+      allow read: if true;
+      
+      // Hanya admin yang bisa menulis (untuk sekarang disabled)
+      allow write: if false;
+    }
+    
+    // ============================================
+    // FEEDBACK / REPORTS
+    // ============================================
+    match /feedback/{feedbackId} {
+      // Semua user bisa membuat feedback
+      allow create: if true;
+      
+      // Hanya admin yang bisa membaca/update/delete
+      allow read, update, delete: if false;
+    }
+  }
+}
