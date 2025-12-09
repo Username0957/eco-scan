@@ -16,9 +16,7 @@ export const metadata: Metadata = {
   keywords: ["eco", "scan", "sampah", "plastik", "AI", "lingkungan", "daur ulang", "mikroplastik"],
   authors: [{ name: "EcoScan Team" }],
   icons: {
-    icon: [
-      
-    ],
+    
     apple: "/apple-icon.png",
   },
 }
