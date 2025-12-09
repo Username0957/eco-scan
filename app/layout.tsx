@@ -15,10 +15,7 @@ export const metadata: Metadata = {
   generator: "v0.app",
   keywords: ["eco", "scan", "sampah", "plastik", "AI", "lingkungan", "daur ulang", "mikroplastik"],
   authors: [{ name: "EcoScan Team" }],
-  icons: {
-    
-    apple: "/apple-icon.png",
-  },
+  
 }
 
 export const viewport: Viewport = {
