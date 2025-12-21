@@ -7,13 +7,8 @@ export function Footer() {
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-2">
             <LeafIcon className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">EcoScan</span>
+            <span className="font-semibold text-foreground">Plastigram</span>
           </div>
-
-          <p className="max-w-md text-sm text-muted-foreground leading-relaxed">
-            Terinspirasi dari Al-A&apos;raf ayat 56: &quot;Janganlah kamu berbuat kerusakan di bumi setelah diatur
-            dengan baik.&quot;
-          </p>
 
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
             <span>Dibuat dengan</span>
@@ -22,7 +17,7 @@ export function Footer() {
           </div>
 
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} EcoScan. Semua hak dilindungi.
+            &copy; {new Date().getFullYear()} Plastigram. Semua hak dilindungi.
           </p>
         </div>
       </div>

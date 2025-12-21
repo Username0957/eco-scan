@@ -6,10 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { UploadIcon, ScanIcon, XIcon, LoaderIcon, LeafIcon, SparklesIcon } from "@/components/icons"
 import { cn } from "@/lib/utils"
-import { analyzeImageClient } from "@/lib/vision-client"
 import { classifyImageHeuristic } from "@/lib/heuristic-classifier"
-
-type ScanMode = "ai" | "quick"
 
 interface OverlayResult {
   type: string
@@ -53,7 +50,6 @@ export function UploadSection() {
   const [isAnalyzing, setIsAnalyzing] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
   const [analysisStatus, setAnalysisStatus] = React.useState<string>("")
-  const [scanMode, setScanMode] = React.useState<ScanMode>("ai")
   const [overlayResult, setOverlayResult] = React.useState<OverlayResult | null>(null)
   const [logs, setLogs] = React.useState<string[]>(["Ready."])
   const [showLogs, setShowLogs] = React.useState(false)
@@ -248,70 +244,8 @@ export function UploadSection() {
     }
   }
 
-  const performAIScan = async () => {
-    if (!image || scanInProgressRef.current) return
-
-    scanInProgressRef.current = true
-    setIsScanning(true)
-    setError(null)
-    addLog("Memulai AI Scan...")
-
-    try {
-      setIsAnalyzing(true)
-      setAnalysisStatus("Menganalisis gambar secara lokal...")
-      addLog("Menganalisis fitur visual...")
-      const visionResult = await analyzeImageClient(image)
-
-      setAnalysisStatus("Mengirim hasil analisis ke AI...")
-      addLog("Mengirim ke AI untuk klasifikasi...")
-      setIsAnalyzing(false)
-
-      const response = await fetch("/api/scan", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          visualDescription: visionResult.visualDescription,
-          estimatedObjects: visionResult.estimatedObjects,
-          confidence: visionResult.confidence,
-          thumbnailBase64: visionResult.thumbnailBase64,
-        }),
-      })
-
-      if (response.status === 429) {
-        const data = await response.json()
-        setError(data.error)
-        addLog("Rate limit tercapai, coba Quick Scan sebagai alternatif")
-        return
-      }
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Gagal melakukan analisis")
-      }
-
-      const result = await response.json()
-      addLog(`AI Scan selesai: ${result.objects?.length || 0} objek terdeteksi`)
-      addLog(`Provider: ${result.provider || "unknown"}`)
-
-      sessionStorage.setItem("scanResult", JSON.stringify(result))
-      router.push("/hasil")
-    } catch (err) {
-      addLog(`Error: ${err instanceof Error ? err.message : "Unknown error"}`)
-      setError(err instanceof Error ? err.message : "Terjadi kesalahan saat menganalisis gambar")
-    } finally {
-      setIsScanning(false)
-      setIsAnalyzing(false)
-      setAnalysisStatus("")
-      scanInProgressRef.current = false
-    }
-  }
-
   const handleScan = useDebounce(() => {
-    if (scanMode === "quick") {
-      performQuickScan()
-    } else {
-      performAIScan()
-    }
+    performQuickScan()
   }, 2000)
 
   const goToResults = () => {
@@ -369,44 +303,19 @@ export function UploadSection() {
                 )}
               </div>
 
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setScanMode("quick")}
-                  className={cn(
-                    "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                    scanMode === "quick"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  Quick Scan (Lokal)
-                </button>
-                <button
-                  onClick={() => setScanMode("ai")}
-                  className={cn(
-                    "flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                    scanMode === "ai"
-                      ? "border-primary bg-primary/10 text-primary"
-                      : "border-border bg-background text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  AI Scan (Cloud)
-                </button>
-              </div>
-
               <div className="rounded-lg bg-muted/50 p-3">
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Mode:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "Heuristic + AI Saran" : "AI Vision"}</span>
+                    <span className="font-medium">Heuristic</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Akurasi:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "~70-85%" : "~90%+"}</span>
+                    <span className="font-medium">~70-85%</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Provider:</span>
-                    <span className="font-medium">{scanMode === "quick" ? "Lokal" : "OpenAI"}</span>
+                    <span className="font-medium">Lokal</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Status:</span>
@@ -446,7 +355,7 @@ export function UploadSection() {
                   ) : (
                     <>
                       <ScanIcon className="h-5 w-5" />
-                      {scanMode === "quick" ? "Quick Scan" : "AI Scan"}
+                      Quick Scan
                     </>
                   )}
                 </Button>
@@ -459,7 +368,7 @@ export function UploadSection() {
                 )}
               </div>
 
-              {overlayResult && heuristicResult && scanMode === "quick" && (
+              {overlayResult && heuristicResult && (
                 <Button
                   onClick={fetchAISuggestions}
                   disabled={isLoadingSuggestions}

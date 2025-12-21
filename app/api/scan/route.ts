@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { updateGlobalStats, saveScanResult } from "@/lib/firestore"
 import { checkRateLimit, hashImage, getCachedResult, setCachedResult } from "@/lib/rate-limit"
 import type { ScanResult } from "@/lib/types"
@@ -67,98 +65,20 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    let text: string | undefined
-    let usedMode: "ai" | "local" = "local"
-
-    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
-
-    if (useAI && hasOpenAIKey && thumbnailBase64) {
-      try {
-        console.log("[v0] Trying OpenAI vision analysis...")
-        const result = await generateText({
-          model: openai("gpt-4o"),
-          messages: [
-            {
-              role: "user",
-              content: [
-                { type: "text", text: VISION_ANALYSIS_PROMPT },
-                { type: "image", image: thumbnailBase64 },
-              ],
-            },
-          ],
-          temperature: 0.3,
-        })
-        text = result.text
-        usedMode = "ai"
-        console.log("[v0] OpenAI vision analysis success")
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.error("[v0] OpenAI analysis failed:", errorMessage)
-        // Fall through to heuristic
-      }
-    }
-
-    if (!text) {
-      console.log("[v0] Using heuristic classification")
-      const basicResult = generateHeuristicResponse(estimatedObjects || ["sampah plastik"])
-      basicResult.provider = "heuristic"
-      basicResult.analysisMode = "local"
-
-      try {
-        await Promise.all([saveScanResult(basicResult, userId), updateGlobalStats(basicResult)])
-      } catch (firestoreError) {
-        console.error("Firestore error:", firestoreError)
-      }
-
-      setCachedResult(descHash, basicResult)
-
-      return NextResponse.json(basicResult, {
-        headers: { "X-RateLimit-Remaining": String(rateLimitResult.remaining) },
-      })
-    }
-
-    // Parse JSON from AI response
-    let result
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/)
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0])
-      } else {
-        throw new Error("No JSON found")
-      }
-    } catch {
-      result = {
-        objects: [],
-        education: {
-          title: "Hasil Analisis",
-          description: text.substring(0, 500),
-          tips: [
-            "Pisahkan sampah berdasarkan jenisnya",
-            "Cuci bersih wadah plastik sebelum didaur ulang",
-            "Kurangi plastik sekali pakai",
-          ],
-        },
-      }
-    }
-
-    const scanResult: ScanResult = {
-      ...result,
-      totalObjects: result.objects?.length || 0,
-      scanDate: new Date().toISOString(),
-      userId: userId || "anonymous",
-      provider: "openai",
-      analysisMode: usedMode,
-    }
-
-    setCachedResult(descHash, scanResult)
+    console.log("[v0] Using heuristic classification")
+    const basicResult = generateHeuristicResponse(estimatedObjects || ["sampah plastik"])
+    basicResult.provider = "heuristic"
+    basicResult.analysisMode = "local"
 
     try {
-      await Promise.all([saveScanResult(scanResult, userId), updateGlobalStats(scanResult)])
+      await Promise.all([saveScanResult(basicResult, userId), updateGlobalStats(basicResult)])
     } catch (firestoreError) {
       console.error("Firestore error:", firestoreError)
     }
 
-    return NextResponse.json(scanResult, {
+    setCachedResult(descHash, basicResult)
+
+    return NextResponse.json(basicResult, {
       headers: { "X-RateLimit-Remaining": String(rateLimitResult.remaining) },
     })
   } catch (error) {
@@ -290,7 +210,7 @@ function generateHeuristicResponse(estimatedObjects: string[]): ScanResult {
     "kemasan snack": {
       plasticType: "Other (Multilayer)",
       plasticCode: "7",
-      decompositionTime: "500+ tahun",
+      decompositionTime: "100-500 tahun",
       microplasticRisk: "Tinggi",
       ecoAlternative: "Snack dalam kemasan kertas atau bawa wadah sendiri",
       description: "Kemasan multilayer sangat sulit didaur ulang karena terdiri dari berbagai lapisan material.",

@@ -27,14 +27,14 @@ export default function HomePage() {
               </h1>
 
               <p className="mb-8 text-lg text-muted-foreground leading-relaxed text-pretty">
-                EcoScan membantu Anda mengidentifikasi jenis sampah plastik, memahami bahaya mikroplastik, dan menemukan
-                alternatif ramah lingkungan dengan teknologi AI.
+                Plastigram membantu Anda mengidentifikasi jenis sampah plastik, memahami bahaya mikroplastik, dan menemukan
+                alternatif ramah lingkungan dengan teknologi canggih.
               </p>
 
               <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <EarthIcon className="h-5 w-5 text-primary" />
-                  <span>Analisis AI</span>
+                  <span>Analisis</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RecycleIcon className="h-5 w-5 text-primary" />
@@ -66,7 +66,7 @@ export default function HomePage() {
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">Fitur Unggulan</h2>
               <p className="text-muted-foreground">
-                Teknologi AI canggih untuk membantu Anda memahami dan mengelola sampah dengan lebih baik
+                Teknologi canggih untuk membantu Anda memahami dan mengelola sampah dengan lebih baik
               </p>
             </div>
             <FeatureCards />

@@ -1,6 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { generateText } from "ai"
-import { openai } from "@ai-sdk/openai"
 import { checkRateLimit } from "@/lib/rate-limit"
 
 const RATE_LIMIT_CONFIG = {
@@ -68,49 +66,6 @@ export async function POST(request: NextRequest) {
     }
 
     const hasOpenAIKey = !!process.env.OPENAI_API_KEY
-
-    if (hasOpenAIKey) {
-      const userQuery = `Berikan saran detail untuk:
-- Jenis Plastik: ${plasticType}
-- Kode Plastik: ${plasticCode}
-- Objek: ${objectName}
-- Alternatif saat ini: ${currentAlternative}
-
-Berikan saran yang lebih spesifik, kreatif, dan mudah diterapkan di Indonesia.`
-
-      try {
-        const result = await generateText({
-          model: openai("gpt-4o-mini"),
-          messages: [{ role: "user", content: `${SUGGESTION_PROMPT}\n\n${userQuery}` }],
-          temperature: 0.7,
-        })
-
-        // Parse JSON response
-        let parsedResult
-        try {
-          const jsonMatch = result.text.match(/\{[\s\S]*\}/)
-          if (jsonMatch) {
-            parsedResult = JSON.parse(jsonMatch[0])
-          } else {
-            throw new Error("No JSON found")
-          }
-        } catch {
-          // Fall through to default
-          parsedResult = null
-        }
-
-        if (parsedResult) {
-          return NextResponse.json({
-            ...parsedResult,
-            provider: "openai",
-          })
-        }
-      } catch (error: unknown) {
-        const errorMessage = error instanceof Error ? error.message : String(error)
-        console.error("OpenAI suggestion failed:", errorMessage)
-        // Fall through to default response
-      }
-    }
 
     return NextResponse.json({
       detailedAlternatives: getDefaultAlternatives(plasticType),

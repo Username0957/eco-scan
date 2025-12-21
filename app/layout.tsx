@@ -9,12 +9,11 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: "EcoScan - Sistem Analisis Sampah Berbasis AI",
+  title: "Plastigram - Sistem Analisis Sampah Plastik",
   description:
     "Identifikasi jenis sampah plastik, pahami bahaya mikroplastik, dan temukan alternatif ramah lingkungan dengan teknologi AI.",
-  generator: "v0.app",
   keywords: ["eco", "scan", "sampah", "plastik", "AI", "lingkungan", "daur ulang", "mikroplastik"],
-  authors: [{ name: "EcoScan Team" }],
+  authors: [{ name: "Plastigram Team" }],
   
 }
 
