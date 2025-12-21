@@ -54,3 +54,28 @@ export interface FirestoreGlobalStats {
   plasticCategoryCounts: Record<string, number>
   lastUpdate: Date
 }
+
+// heuristic/types.ts
+export interface VisualFeatures {
+  brightness: number
+  saturation: number
+  contrast: number
+  edgeDensity: number
+  transparencyScore: number
+}
+
+export interface TMSignal {
+  material: "PET" | "HDPE" | "LDPE" | "PP" | "PS" | "NON_PLASTIC" | "PVC"
+  confidence: number
+}
+
+export interface HeuristicInput {
+  visual: VisualFeatures
+  tm: TMSignal | null
+}
+
+export interface ClassificationResult {
+  material: string
+  confidence: number
+  reasoning: string[]
+}
