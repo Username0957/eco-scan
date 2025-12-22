@@ -21,28 +21,30 @@ export function LeafIcon({ className }: { className?: string }) {
 export function RecycleIcon({ className }: { className?: string }) {
   return (
     <svg
-      className={className}
       xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
       strokeWidth="2"
       strokeLinecap="round"
       strokeLinejoin="round"
+      className={className}
     >
-      <path d="M7 19H4.815a1.83 1.83 0 0 1-1.57-.881 1.785 1.785 0 0 1-.004-1.784L7.196 9.5" />
-      <path d="M11 19h8.203a1.83 1.83 0 0 0 1.556-.89 1.784 1.784 0 0 0 0-1.775l-1.226-2.12" />
-      <path d="m14 16-3 3 3 3" />
-      <path d="M8.293 13.596 4.875 8.5l3.418-5.096a1.785 1.785 0 0 1 1.557-.89h2.49" />
-      <path d="M8 8 3-3-3-3" />
-      <path d="m12.586 16-3.418 5.096a1.785 1.785 0 0 0 0 1.775" />
-      <path d="M16 8 3-3 3-3" />
-      <path d="m9.5 5.5 4-1 1 4" />
+      {/* Arrow 1 */}
+      <path d="M7.5 7.5 10 3l2.5 4.5" />
+      <path d="M10 3h4.5a3 3 0 0 1 2.6 1.5l1.4 2.5" />
+
+      {/* Arrow 2 */}
+      <path d="M16.5 16.5 14 21l-2.5-4.5" />
+      <path d="M14 21H9.5a3 3 0 0 1-2.6-1.5l-1.4-2.5" />
+
+      {/* Arrow 3 */}
+      <path d="M3 10.5 7.5 10l-2.5-4" />
+      <path d="M7.5 10 9.8 6.5" />
     </svg>
   )
 }
+
 
 export function EarthIcon({ className }: { className?: string }) {
   return (
