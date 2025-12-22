@@ -1,10 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 
-const RATE_LIMIT_CONFIG = {
-  maxRequests: 20,
-  windowMs: 60 * 1000,
-}
 
 const SUGGESTION_PROMPT = `Kamu adalah ahli lingkungan dan daur ulang plastik Indonesia. Berdasarkan jenis plastik yang diberikan, berikan saran DETAIL yang personal dan bermanfaat untuk konteks Indonesia.
 
@@ -35,7 +31,17 @@ Format respons (JSON):
     "communityTips": "tips dari komunitas lokal"
   }
 }`
+/* ===============================
+   RATE LIMIT CONFIG
+================================ */
+const RATE_LIMIT_CONFIG = {
+  maxRequests: 20,
+  windowMs: 60 * 1000,
+}
 
+/* ===============================
+   CLIENT IP
+================================ */
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for")
   const realIP = request.headers.get("x-real-ip")
@@ -44,39 +50,103 @@ function getClientIP(request: NextRequest): string {
   return "unknown"
 }
 
+/* ===============================
+   POST HANDLER (FINAL)
+================================ */
 export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request)
-    const rateLimitResult = checkRateLimit(clientIP + "-suggestions", RATE_LIMIT_CONFIG)
+    const rateLimit = checkRateLimit(
+      clientIP + "-suggestions",
+      RATE_LIMIT_CONFIG
+    )
 
-    if (!rateLimitResult.success) {
+    if (!rateLimit.success) {
       return NextResponse.json(
         {
-          error: `Terlalu banyak permintaan. Silakan tunggu ${rateLimitResult.retryAfter} detik.`,
-          retryAfter: rateLimitResult.retryAfter,
+          error: "Terlalu banyak permintaan",
+          retryAfter: rateLimit.retryAfter,
         },
-        { status: 429 },
+        { status: 429 }
       )
     }
 
-    const { plasticType, plasticCode, objectName, currentAlternative } = await request.json()
+    const { plasticType } = await request.json()
 
     if (!plasticType) {
-      return NextResponse.json({ error: "Jenis plastik tidak ditemukan" }, { status: 400 })
+      return NextResponse.json(
+        { error: "Jenis plastik tidak ditemukan" },
+        { status: 400 }
+      )
     }
 
-    const hasOpenAIKey = !!process.env.OPENAI_API_KEY
+    /* ===============================
+       TRY GEMINI AI
+    =============================== */
+    if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      try {
+        const aiResponse = await fetch(
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
+            process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [
+                    {
+                      text: `Berikan rekomendasi alternatif ramah lingkungan untuk plastik jenis ${plasticType} dalam format JSON.
+                      Gunakan prompt berikut sebagai panduan: ${SUGGESTION_PROMPT}`,
+                    },
+                  ],
+                },
+              ],
+            }),
+          }
+        )
 
+        if (!aiResponse.ok) {
+          throw new Error("Gemini response error")
+        }
+
+        const aiData = await aiResponse.json()
+        const text =
+          aiData?.candidates?.[0]?.content?.parts?.[0]?.text
+
+        if (!text) {
+          throw new Error("Gemini empty response")
+        }
+
+        const parsed = JSON.parse(text)
+
+        return NextResponse.json({
+          ...parsed,
+          provider: "gemini",
+        })
+      } catch (error) {
+        console.warn("Gemini gagal, fallback ke default alternatives")
+      }
+    }
+
+    /* ===============================
+       FINAL FALLBACK (SESUI PERMINTAAN)
+    =============================== */
     return NextResponse.json({
       detailedAlternatives: getDefaultAlternatives(plasticType),
-      disposalTips: getDefaultDisposalTips(plasticType),
-      environmentalImpact: getDefaultImpact(plasticType),
-      localInfo: getDefaultLocalInfo(),
+      disposalTips: [],
+      environmentalImpact: null,
+      localInfo: null,
       provider: "local",
     })
   } catch (error) {
     console.error("Suggestions API Error:", error)
-    return NextResponse.json({ error: "Terjadi kesalahan" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Terjadi kesalahan server" },
+      { status: 500 }
+    )
   }
 }
 
