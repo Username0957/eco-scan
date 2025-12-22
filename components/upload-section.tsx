@@ -1,9 +1,24 @@
 "use client"
 
-import React, { useRef, useState } from "react"
+import * as React from "react"
+import { useRouter } from "next/navigation"
+import { Button } from "@/components/ui/button"
+import { Card } from "@/components/ui/card"
+import {
+  UploadIcon,
+  ScanIcon,
+  XIcon,
+  LoaderIcon,
+  LeafIcon,
+  SparklesIcon,
+} from "@/components/icons"
+import { cn } from "@/lib/utils"
 import { analyzeImageHybrid } from "@/lib/heuristic-classifier"
 
-type OverlayResult = {
+/* =========================
+   TYPES
+========================= */
+interface OverlayResult {
   type: string
   confidence: number
   decompositionTime: string
@@ -11,38 +26,73 @@ type OverlayResult = {
   ecoAlternative: string
 }
 
-type HeuristicResult = {
+interface HeuristicResult {
   plasticType: string
   plasticCode: string
   objectName: string
 }
 
-export default function UploadSection() {
-  const [image, setImage] = useState<string | null>(null)
-  const [isScanning, setIsScanning] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [logs, setLogs] = useState<string[]>([])
-  const [overlayResult, setOverlayResult] =
-    useState<OverlayResult | null>(null)
-  const [heuristicResult, setHeuristicResult] =
-    useState<HeuristicResult | null>(null)
+interface AISuggestions {
+  detailedAlternatives?: {
+    name: string
+    description: string
+    benefits: string[]
+    whereToGet: string
+    priceRange: string
+  }[]
+  environmentalImpact?: {
+    problem: string
+    solution: string
+    funFact: string
+  }
+  provider?: string
+}
 
-  const scanInProgressRef = useRef(false)
+/* =========================
+   COMPONENT
+========================= */
+export function UploadSection() {
+  const router = useRouter()
+
+  const [image, setImage] = React.useState<string | null>(null)
+  const [isScanning, setIsScanning] = React.useState(false)
+  const [error, setError] = React.useState<string | null>(null)
+
+  const [overlayResult, setOverlayResult] =
+    React.useState<OverlayResult | null>(null)
+  const [heuristicResult, setHeuristicResult] =
+    React.useState<HeuristicResult | null>(null)
+
+  const [logs, setLogs] = React.useState<string[]>([])
+  const [showLogs, setShowLogs] = React.useState(false)
+
+  const [aiSuggestions, setAISuggestions] =
+    React.useState<AISuggestions | null>(null)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] =
+    React.useState(false)
+  const [showSuggestions, setShowSuggestions] = React.useState(false)
+
+  const scanInProgressRef = React.useRef(false)
+  const fileInputRef = React.useRef<HTMLInputElement>(null)
 
   /* =========================
-     Helper: log system
+     LOG
   ========================= */
   const addLog = (msg: string) => {
-    setLogs((prev) => [...prev, `[${new Date().toLocaleTimeString()}] ${msg}`])
+    setLogs((prev) => [
+      `[${new Date().toLocaleTimeString()}] ${msg}`,
+      ...prev,
+    ])
   }
 
   /* =========================
-     Helper: base64 → ImageData
+     BASE64 → IMAGEDATA
   ========================= */
-  async function base64ToImageData(
-    base64: string
-  ): Promise<{ imageData: ImageData; imageEl: HTMLImageElement }> {
-    return new Promise((resolve, reject) => {
+  async function base64ToImageData(base64: string) {
+    return new Promise<{
+      imageData: ImageData
+      imageEl: HTMLImageElement
+    }>((resolve, reject) => {
       const img = new Image()
       img.crossOrigin = "anonymous"
       img.onload = () => {
@@ -50,15 +100,17 @@ export default function UploadSection() {
         canvas.width = img.width
         canvas.height = img.height
         const ctx = canvas.getContext("2d")
-        if (!ctx) return reject("Canvas context error")
+        if (!ctx) return reject("Canvas error")
         ctx.drawImage(img, 0, 0)
-        const imageData = ctx.getImageData(
-          0,
-          0,
-          canvas.width,
-          canvas.height
-        )
-        resolve({ imageData, imageEl: img })
+        resolve({
+          imageData: ctx.getImageData(
+            0,
+            0,
+            canvas.width,
+            canvas.height
+          ),
+          imageEl: img,
+        })
       }
       img.onerror = reject
       img.src = base64
@@ -66,7 +118,7 @@ export default function UploadSection() {
   }
 
   /* =========================
-     Main Scan Logic (FINAL)
+     SCAN (TIDAK DIUBAH)
   ========================= */
   const performQuickScan = async () => {
     if (!image || scanInProgressRef.current) return
@@ -74,16 +126,17 @@ export default function UploadSection() {
     scanInProgressRef.current = true
     setIsScanning(true)
     setError(null)
+    setAISuggestions(null)
 
     try {
       addLog("Menyiapkan gambar...")
       const { imageData, imageEl } = await base64ToImageData(image)
 
-      addLog("Menjalankan analisis Hybrid (Heuristic + TM)...")
+      addLog("Analisis hybrid (Heuristic + TM)...")
       const result = await analyzeImageHybrid(imageData, imageEl)
 
       addLog(
-        `Terdeteksi: ${result.material} (${Math.round(
+        `Terdeteksi ${result.material} (${Math.round(
           result.confidence * 100
         )}%)`
       )
@@ -91,12 +144,13 @@ export default function UploadSection() {
       setOverlayResult({
         type: result.material,
         confidence: result.confidence,
-        decompositionTime: "± 100–500 tahun",
+        decompositionTime: "±100–500 tahun",
         microplasticRisk:
           result.material === "PS" || result.material === "PVC"
             ? "Tinggi"
             : "Sedang",
-        ecoAlternative: "Gunakan bahan pakai ulang atau biodegradable",
+        ecoAlternative:
+          "Gunakan alternatif pakai ulang atau biodegradable",
       })
 
       setHeuristicResult({
@@ -118,8 +172,8 @@ export default function UploadSection() {
       )
     } catch (e) {
       console.error(e)
-      setError("Gagal melakukan analisis gambar")
-      addLog("Terjadi kesalahan saat analisis")
+      setError("Gagal menganalisis gambar")
+      addLog("Error saat analisis")
     } finally {
       setIsScanning(false)
       scanInProgressRef.current = false
@@ -127,58 +181,140 @@ export default function UploadSection() {
   }
 
   /* =========================
+     AI SUGGESTIONS
+  ========================= */
+  const fetchAISuggestions = async () => {
+    if (!heuristicResult) return
+    setIsLoadingSuggestions(true)
+    setShowSuggestions(true)
+
+    try {
+      const res = await fetch("/api/suggestions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(heuristicResult),
+      })
+      const data = await res.json()
+      setAISuggestions(data)
+    } catch {
+      setError("Gagal memuat saran AI")
+    } finally {
+      setIsLoadingSuggestions(false)
+    }
+  }
+
+  /* =========================
      UI
   ========================= */
   return (
-    <section className="w-full max-w-xl mx-auto p-4 space-y-4">
-      <input
-        type="file"
-        accept="image/*"
-        onChange={(e) => {
-          const file = e.target.files?.[0]
-          if (!file) return
-          const reader = new FileReader()
-          reader.onload = () => setImage(reader.result as string)
-          reader.readAsDataURL(file)
-        }}
-      />
+    <div className="mx-auto max-w-xl">
+      <Card className="border-dashed border-2 p-6">
+        {!image ? (
+          <label className="flex flex-col items-center gap-4 cursor-pointer">
+            <UploadIcon className="h-10 w-10 text-primary" />
+            <p className="text-sm text-muted-foreground">
+              Upload gambar sampah plastik
+            </p>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0]
+                if (!f) return
+                const r = new FileReader()
+                r.onload = () => setImage(r.result as string)
+                r.readAsDataURL(f)
+              }}
+            />
+          </label>
+        ) : (
+          <>
+            <img
+              src={image}
+              className="rounded-lg mb-3"
+              alt="preview"
+            />
 
-      {image && (
-        <img
-          src={image}
-          alt="preview"
-          className="w-full rounded-lg border"
-        />
-      )}
+            {overlayResult && (
+              <div className="rounded-lg bg-primary/10 p-3 mb-3 text-sm">
+                <b>{overlayResult.type}</b> (
+                {Math.round(overlayResult.confidence * 100)}%)
+                <br />
+                Terurai: {overlayResult.decompositionTime}
+                <br />
+                Risiko: {overlayResult.microplasticRisk}
+                <br />
+                Alternatif: {overlayResult.ecoAlternative}
+              </div>
+            )}
 
-      <button
-        onClick={performQuickScan}
-        disabled={isScanning || !image}
-        className="w-full py-2 rounded bg-green-600 text-white disabled:opacity-50"
-      >
-        {isScanning ? "Memindai..." : "Scan Sampah"}
-      </button>
+            <Button
+              onClick={performQuickScan}
+              disabled={isScanning}
+              className="w-full gap-2"
+            >
+              {isScanning ? (
+                <>
+                  <LoaderIcon className="animate-spin h-4 w-4" />
+                  Memindai...
+                </>
+              ) : (
+                <>
+                  <ScanIcon className="h-4 w-4" />
+                  Scan Sampah
+                </>
+              )}
+            </Button>
 
-      {error && <p className="text-red-500">{error}</p>}
+            {heuristicResult && (
+              <Button
+                variant="outline"
+                className="w-full mt-2"
+                onClick={fetchAISuggestions}
+                disabled={isLoadingSuggestions}
+              >
+                <SparklesIcon className="h-4 w-4 mr-2" />
+                Saran AI
+              </Button>
+            )}
 
-      {overlayResult && (
-        <div className="p-3 rounded bg-green-50 text-sm">
-          <p><b>Jenis:</b> {overlayResult.type}</p>
-          <p>
-            <b>Confidence:</b>{" "}
-            {Math.round(overlayResult.confidence * 100)}%
-          </p>
-          <p><b>Terurai:</b> {overlayResult.decompositionTime}</p>
-          <p><b>Risiko Mikroplastik:</b> {overlayResult.microplasticRisk}</p>
-          <p><b>Alternatif:</b> {overlayResult.ecoAlternative}</p>
-        </div>
-      )}
+            {showSuggestions && aiSuggestions && (
+              <div className="mt-3 text-sm bg-muted p-3 rounded">
+                <b>Saran AI</b>
+                {aiSuggestions.detailedAlternatives?.map((a, i) => (
+                  <div key={i} className="mt-2">
+                    <b>{a.name}</b>
+                    <p>{a.description}</p>
+                  </div>
+                ))}
+              </div>
+            )}
 
-      <div className="text-xs text-gray-500 space-y-1">
-        {logs.map((l, i) => (
-          <div key={i}>{l}</div>
-        ))}
-      </div>
-    </section>
+            <button
+              onClick={() => setShowLogs(!showLogs)}
+              className="text-xs mt-2 text-muted-foreground"
+            >
+              {showLogs ? "Sembunyikan log" : "Tampilkan log"}
+            </button>
+
+            {showLogs && (
+              <div className="mt-2 text-xs bg-muted p-2 rounded">
+                {logs.map((l, i) => (
+                  <div key={i}>{l}</div>
+                ))}
+              </div>
+            )}
+
+            {error && (
+              <div className="text-sm text-destructive mt-2">
+                {error}
+              </div>
+            )}
+          </>
+        )}
+      </Card>
+    </div>
   )
 }

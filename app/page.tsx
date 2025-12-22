@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import  UploadSection  from "@/components/upload-section"
+import  { UploadSection }  from "@/components/upload-section"
 import { FeatureCards } from "@/components/feature-cards"
 import { LeafIcon, EarthIcon, RecycleIcon } from "@/components/icons"
 
