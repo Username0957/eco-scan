@@ -84,53 +84,76 @@ export async function POST(request: NextRequest) {
        TRY GEMINI AI
     =============================== */
     if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      try {
-        const aiResponse = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" +
-            process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              contents: [
+  try {
+    const aiResponse = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" +
+        process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+       {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [
                 {
-                  parts: [
-                    {
-                      text: `Berikan rekomendasi alternatif ramah lingkungan untuk plastik jenis ${plasticType} dalam format JSON.
-                      Gunakan prompt berikut sebagai panduan: ${SUGGESTION_PROMPT}`,
-                    },
-                  ],
+                  text: `
+⚠️ PENTING:
+- JANGAN menulis kalimat pembuka
+- JANGAN menulis penutup
+- JANGAN menulis teks di luar JSON
+- WAJIB balas dalam 1 JSON object valid
+
+${SUGGESTION_PROMPT}
+
+Jenis plastik: ${plasticType}
+`,
                 },
               ],
-            }),
-          }
-        )
-
-        if (!aiResponse.ok) {
-          throw new Error("Gemini response error")
-        }
-
-        const aiData = await aiResponse.json()
-        const text =
-          aiData?.candidates?.[0]?.content?.parts?.[0]?.text
-
-        if (!text) {
-          throw new Error("Gemini empty response")
-        }
-
-        const parsed = JSON.parse(text)
-
-        return NextResponse.json({
-          ...parsed,
-          provider: "gemini",
-        })
-      } catch (error) {
-        console.warn("Gemini gagal, fallback ke default alternatives")
+            },
+          ],
+        }),
       }
+    ) 
+
+    if (!aiResponse.ok) {
+      throw new Error("Gemini HTTP error")
     }
 
+    const aiData = await aiResponse.json()
+    const rawText =
+      aiData?.candidates?.[0]?.content?.parts?.[0]?.text
+
+    if (!rawText) {
+      throw new Error("Gemini empty response")
+    }
+
+    /* ===============================
+       STRICT JSON EXTRACTION
+    =============================== */
+    const start = rawText.indexOf("{")
+    const end = rawText.lastIndexOf("}")
+
+    if (start === -1 || end === -1 || end <= start) {
+      throw new Error("No JSON found in Gemini response")
+    }
+
+    const jsonString = rawText.slice(start, end + 1)
+    const parsed = JSON.parse(jsonString)
+
+    return NextResponse.json({
+      ...parsed,
+      provider: "gemini",
+    })
+  } catch (error) {
+    console.warn(
+      "Gemini gagal, fallback ke default alternatives:",
+      error
+    )
+  }
+}
     /* ===============================
        FINAL FALLBACK (SESUI PERMINTAAN)
     =============================== */

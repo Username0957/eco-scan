@@ -14,6 +14,15 @@ import {
 } from "@/components/icons"
 import { cn } from "@/lib/utils"
 import { analyzeImageHybrid } from "@/lib/heuristic-classifier"
+import { 
+  mapPlasticCode, 
+  getDecompositionTime,
+  getMicroplasticRisk,
+  getEcoAlternative,
+  getPlasticDescription,
+  getEducationDescription,
+  getEducationTips
+ } from "@/lib/types"
 
 /* =========================
    TYPES
@@ -24,6 +33,26 @@ interface OverlayResult {
   decompositionTime: string
   microplasticRisk: string
   ecoAlternative: string
+}
+
+type DetectedObject = {
+  name: string
+  plasticType: string
+  plasticCode: string
+  decompositionTime: string
+  microplasticRisk: "Rendah" | "Sedang" | "Tinggi"
+  ecoAlternative: string
+  description: string
+}
+
+type ScanResult = {
+  totalObjects: number
+  objects: DetectedObject[]
+  education?: {
+    title: string
+    description: string
+    tips: string[]
+  }
 }
 
 interface HeuristicResult {
@@ -48,11 +77,13 @@ interface AISuggestions {
   provider?: string
 }
 
+
 /* =========================
    COMPONENT
 ========================= */
 export function UploadSection() {
   const router = useRouter()
+  const [loading, setLoading] = React.useState(false)
 
   const [image, setImage] = React.useState<string | null>(null)
   const [isScanning, setIsScanning] = React.useState(false)
@@ -159,17 +190,38 @@ export function UploadSection() {
         objectName: result.material,
       })
 
-      sessionStorage.setItem(
-        "scanResult",
-        JSON.stringify({
-          material: result.material,
-          confidence: result.confidence,
-          ecoScore: result.ecoScore,
-          reasoning: result.reasoning,
-          provider: "hybrid-local",
-          timestamp: new Date().toISOString(),
-        })
-      )
+const objects: DetectedObject[] = []
+
+// hasil dari analyzeImageHybrid
+const detectedType = result.material // contoh: "PET" | "PP" | "HDPE" | dll
+
+objects.push({
+  name: "Sampah Plastik Terdeteksi",
+  plasticType: detectedType,
+  plasticCode: mapPlasticCode(detectedType),
+  decompositionTime: getDecompositionTime(detectedType),
+  microplasticRisk: getMicroplasticRisk(detectedType),
+  ecoAlternative: getEcoAlternative(detectedType),
+  description: getPlasticDescription(detectedType),
+})
+
+const scanResult: ScanResult = {
+  totalObjects: objects.length,
+  objects,
+  education: {
+    title: `Kenapa plastik ${detectedType} berbahaya?`,
+    description: getEducationDescription(detectedType),
+    tips: getEducationTips(detectedType),
+  },
+}
+
+    /* ===============================
+       SIMPAN KE SESSION
+    =============================== */
+    sessionStorage.setItem("scanResult", JSON.stringify(scanResult))
+  
+    
+
     } catch (e) {
       console.error(e)
       setError("Gagal menganalisis gambar")
@@ -282,16 +334,6 @@ export function UploadSection() {
                 Saran AI
               </Button>
             )}
-             {overlayResult && (
-               <Button
-    variant="outline"
-    className="w-full mt-2 gap-2"
-    onClick={() => router.push("/hasil")}
-  >
-    <LeafIcon className="h-4 w-4 text-green-600" />
-    Lihat Detail
-  </Button>
-)}
 
             {showSuggestions && aiSuggestions && (
               <div className="mt-3 text-sm bg-muted p-3 rounded">
@@ -304,6 +346,16 @@ export function UploadSection() {
                 ))}
               </div>
             )}
+            {overlayResult && (
+              <Button
+   variant="outline"
+   className="w-full mt-2 gap-2"
+   onClick={() => router.push("/hasil")}
+ >
+   <LeafIcon className="h-4 w-4 text-green-600" />
+   Lihat Detail
+ </Button>
+)}
 
             <button
               onClick={() => setShowLogs(!showLogs)}
