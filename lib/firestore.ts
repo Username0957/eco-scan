@@ -73,7 +73,6 @@ export async function updateGlobalStats(scanResult: ScanResult): Promise<void> {
 
       await updateDoc(docRef, {
         totalScans: increment(1),
-        totalObjectsDetected: increment(scanResult.totalObjects),
         plasticCategoryCounts: existingCounts,
         lastUpdate: serverTimestamp(),
       })
@@ -81,7 +80,6 @@ export async function updateGlobalStats(scanResult: ScanResult): Promise<void> {
       // Create new stats document
       await setDoc(docRef, {
         totalScans: 1,
-        totalObjectsDetected: scanResult.totalObjects,
         plasticCategoryCounts: categoryCounts,
         lastUpdate: serverTimestamp(),
       })

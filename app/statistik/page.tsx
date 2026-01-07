@@ -4,7 +4,7 @@ import * as React from "react"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { ChartIcon, RecycleIcon, EarthIcon, TrendingUpIcon, LoaderIcon } from "@/components/icons"
+import { ChartIcon, RecycleIcon, LoaderIcon } from "@/components/icons"
 import type { GlobalStats } from "@/lib/types"
 
 const PLASTIC_LABELS: Record<string, string> = {
@@ -106,11 +106,11 @@ export default function StatisticsPage() {
               <ChartIcon className="h-7 w-7 text-primary" />
             </div>
             <h1 className="mb-2 text-3xl font-bold text-foreground md:text-4xl">Statistik Global</h1>
-            <p className="text-muted-foreground">Data analisis sampah dari seluruh pengguna EcoScan</p>
+            <p className="text-muted-foreground">Data analisis sampah dari seluruh pengguna Plastigram</p>
           </div>
 
           {/* Summary Cards */}
-          <div className="mb-8 grid gap-4 md:grid-cols-3">
+          <div className="mb-8 grid gap-4">
             <Card className="border-border bg-card shadow-sm">
               <CardContent className="flex items-center gap-4 p-6">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
@@ -119,34 +119,6 @@ export default function StatisticsPage() {
                 <div>
                   <p className="text-sm text-muted-foreground">Total Scan</p>
                   <p className="text-2xl font-bold text-foreground">{stats?.totalScans?.toLocaleString() || 0}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card shadow-sm">
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/50">
-                  <EarthIcon className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Objek Terdeteksi</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {stats?.totalObjectsDetected?.toLocaleString() || 0}
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-border bg-card shadow-sm">
-              <CardContent className="flex items-center gap-4 p-6">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-secondary">
-                  <TrendingUpIcon className="h-6 w-6 text-primary" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Rata-rata per Scan</p>
-                  <p className="text-2xl font-bold text-foreground">
-                    {stats?.totalScans ? (stats.totalObjectsDetected / stats.totalScans).toFixed(1) : "0"}
-                  </p>
                 </div>
               </CardContent>
             </Card>

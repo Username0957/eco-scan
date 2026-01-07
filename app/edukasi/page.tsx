@@ -79,12 +79,12 @@ const generalTips = [
   {
     title: "Reuse (Gunakan Kembali)",
     description: "Gunakan kembali wadah plastik untuk keperluan lain sebelum membuangnya.",
-    icon: RecycleIcon,
+    icon: CheckCircleIcon,
   },
   {
     title: "Recycle (Daur Ulang)",
     description: "Pisahkan sampah plastik dan serahkan ke bank sampah atau tempat daur ulang.",
-    icon: CheckCircleIcon,
+    icon:  RecycleIcon,
   },
 ]
 

@@ -4,25 +4,18 @@ import * as React from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import {
-  UploadIcon,
-  ScanIcon,
-  XIcon,
-  LoaderIcon,
-  LeafIcon,
-  SparklesIcon,
-} from "@/components/icons"
-import { cn } from "@/lib/utils"
+import { UploadIcon, ScanIcon, LoaderIcon, LeafIcon, SparklesIcon } from "@/components/icons"
 import { analyzeImageHybrid } from "@/lib/heuristic-classifier"
-import { 
-  mapPlasticCode, 
+import {
+  mapPlasticCode,
   getDecompositionTime,
   getMicroplasticRisk,
   getEcoAlternative,
   getPlasticDescription,
   getEducationDescription,
-  getEducationTips
- } from "@/lib/types"
+  getEducationTips,
+} from "@/lib/types"
+import { saveScanResult, updateGlobalStats } from "@/lib/firestore"
 
 /* =========================
    TYPES
@@ -48,7 +41,8 @@ type DetectedObject = {
 type ScanResult = {
   totalObjects: number
   objects: DetectedObject[]
-  education?: {
+  scanDate: string
+  education: {
     title: string
     description: string
     tips: string[]
@@ -77,6 +71,11 @@ interface AISuggestions {
   provider?: string
 }
 
+interface EducationInfo {
+  title: string
+  description: string
+  tips: string[]
+}
 
 /* =========================
    COMPONENT
@@ -89,18 +88,14 @@ export function UploadSection() {
   const [isScanning, setIsScanning] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
 
-  const [overlayResult, setOverlayResult] =
-    React.useState<OverlayResult | null>(null)
-  const [heuristicResult, setHeuristicResult] =
-    React.useState<HeuristicResult | null>(null)
+  const [overlayResult, setOverlayResult] = React.useState<OverlayResult | null>(null)
+  const [heuristicResult, setHeuristicResult] = React.useState<HeuristicResult | null>(null)
 
   const [logs, setLogs] = React.useState<string[]>([])
   const [showLogs, setShowLogs] = React.useState(false)
 
-  const [aiSuggestions, setAISuggestions] =
-    React.useState<AISuggestions | null>(null)
-  const [isLoadingSuggestions, setIsLoadingSuggestions] =
-    React.useState(false)
+  const [aiSuggestions, setAISuggestions] = React.useState<AISuggestions | null>(null)
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = React.useState(false)
   const [showSuggestions, setShowSuggestions] = React.useState(false)
 
   const scanInProgressRef = React.useRef(false)
@@ -110,10 +105,7 @@ export function UploadSection() {
      LOG
   ========================= */
   const addLog = (msg: string) => {
-    setLogs((prev) => [
-      `[${new Date().toLocaleTimeString()}] ${msg}`,
-      ...prev,
-    ])
+    setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev])
   }
 
   /* =========================
@@ -134,12 +126,7 @@ export function UploadSection() {
         if (!ctx) return reject("Canvas error")
         ctx.drawImage(img, 0, 0)
         resolve({
-          imageData: ctx.getImageData(
-            0,
-            0,
-            canvas.width,
-            canvas.height
-          ),
+          imageData: ctx.getImageData(0, 0, canvas.width, canvas.height),
           imageEl: img,
         })
       }
@@ -166,22 +153,14 @@ export function UploadSection() {
       addLog("Analisis hybrid (Heuristic + TM)...")
       const result = await analyzeImageHybrid(imageData, imageEl)
 
-      addLog(
-        `Terdeteksi ${result.material} (${Math.round(
-          result.confidence * 100
-        )}%)`
-      )
+      addLog(`Terdeteksi ${result.material} (${Math.round(result.confidence * 100)}%)`)
 
       setOverlayResult({
         type: result.material,
         confidence: result.confidence,
         decompositionTime: "±100–500 tahun",
-        microplasticRisk:
-          result.material === "PS" || result.material === "PVC"
-            ? "Tinggi"
-            : "Sedang",
-        ecoAlternative:
-          "Gunakan alternatif pakai ulang atau biodegradable",
+        microplasticRisk: result.material === "PS" || result.material === "PVC" ? "Tinggi" : "Sedang",
+        ecoAlternative: "Gunakan alternatif pakai ulang atau biodegradable",
       })
 
       setHeuristicResult({
@@ -190,38 +169,49 @@ export function UploadSection() {
         objectName: result.material,
       })
 
-const objects: DetectedObject[] = []
+      const objects: DetectedObject[] = []
 
-// hasil dari analyzeImageHybrid
-const detectedType = result.material // contoh: "PET" | "PP" | "HDPE" | dll
+      // hasil dari analyzeImageHybrid
+      const detectedType = result.material // contoh: "PET" | "PP" | "HDPE" | dll
 
-objects.push({
-  name: "Sampah Plastik Terdeteksi",
-  plasticType: detectedType,
-  plasticCode: mapPlasticCode(detectedType),
-  decompositionTime: getDecompositionTime(detectedType),
-  microplasticRisk: getMicroplasticRisk(detectedType),
-  ecoAlternative: getEcoAlternative(detectedType),
-  description: getPlasticDescription(detectedType),
-})
+      objects.push({
+        name: "Sampah Plastik Terdeteksi",
+        plasticType: detectedType,
+        plasticCode: mapPlasticCode(detectedType),
+        decompositionTime: getDecompositionTime(detectedType),
+        microplasticRisk: getMicroplasticRisk(detectedType),
+        ecoAlternative: getEcoAlternative(detectedType),
+        description: getPlasticDescription(detectedType),
+      })
 
-const scanResult: ScanResult = {
-  totalObjects: objects.length,
-  objects,
-  education: {
-    title: `Kenapa plastik ${detectedType} berbahaya?`,
-    description: getEducationDescription(detectedType),
-    tips: getEducationTips(detectedType),
-  },
-}
+      const scanResult: ScanResult = {
+        totalObjects: objects.length,
+        objects,
+        scanDate: new Date().toISOString(),
+        education: {
+          title: `Kenapa plastik ${detectedType} berbahaya?`,
+          description:
+            getEducationDescription(detectedType) || "Plastik ini dapat membahayakan lingkungan dan kehidupan laut",
+          tips: (getEducationTips(detectedType) as string[]) || [
+            "Gunakan alternatif ramah lingkungan",
+            "Kurangi penggunaan plastik",
+          ],
+        } as EducationInfo,
+      }
 
-    /* ===============================
-       SIMPAN KE SESSION
-    =============================== */
-    sessionStorage.setItem("scanResult", JSON.stringify(scanResult))
-  
-    
+      /* ===============================
+         SIMPAN KE SESSION
+      =============================== */
+      sessionStorage.setItem("scanResult", JSON.stringify(scanResult))
 
+      try {
+        await saveScanResult(scanResult)
+        await updateGlobalStats(scanResult)
+        addLog("Data tersimpan ke Firestore")
+      } catch (firebaseError) {
+        console.error("Firebase error:", firebaseError)
+        addLog("Peringatan: Data lokal tersimpan, tapi belum ke server")
+      }
     } catch (e) {
       console.error(e)
       setError("Gagal menganalisis gambar")
@@ -231,9 +221,6 @@ const scanResult: ScanResult = {
       scanInProgressRef.current = false
     }
   }
-
- 
-
 
   /* =========================
      AI SUGGESTIONS
@@ -267,9 +254,7 @@ const scanResult: ScanResult = {
         {!image ? (
           <label className="flex flex-col items-center gap-4 cursor-pointer">
             <UploadIcon className="h-10 w-10 text-primary" />
-            <p className="text-sm text-muted-foreground">
-              Upload gambar sampah plastik
-            </p>
+            <p className="text-sm text-muted-foreground">Upload gambar sampah plastik</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -286,16 +271,11 @@ const scanResult: ScanResult = {
           </label>
         ) : (
           <>
-            <img
-              src={image}
-              className="rounded-lg mb-3"
-              alt="preview"
-            />
+            <img src={image || "/placeholder.svg"} className="rounded-lg mb-3" alt="preview" />
 
             {overlayResult && (
               <div className="rounded-lg bg-primary/10 p-3 mb-3 text-sm">
-                <b>{overlayResult.type}</b> (
-                {Math.round(overlayResult.confidence * 100)}%)
+                <b>{overlayResult.type}</b> ({Math.round(overlayResult.confidence * 100)}%)
                 <br />
                 Terurai: {overlayResult.decompositionTime}
                 <br />
@@ -305,11 +285,7 @@ const scanResult: ScanResult = {
               </div>
             )}
 
-            <Button
-              onClick={performQuickScan}
-              disabled={isScanning}
-              className="w-full gap-2"
-            >
+            <Button onClick={performQuickScan} disabled={isScanning} className="w-full gap-2">
               {isScanning ? (
                 <>
                   <LoaderIcon className="animate-spin h-4 w-4" />
@@ -326,7 +302,7 @@ const scanResult: ScanResult = {
             {heuristicResult && (
               <Button
                 variant="outline"
-                className="w-full mt-2"
+                className="w-full mt-2 bg-transparent"
                 onClick={fetchAISuggestions}
                 disabled={isLoadingSuggestions}
               >
@@ -348,19 +324,16 @@ const scanResult: ScanResult = {
             )}
             {overlayResult && (
               <Button
-   variant="outline"
-   className="w-full mt-2 gap-2"
-   onClick={() => router.push("/hasil")}
- >
-   <LeafIcon className="h-4 w-4 text-green-600" />
-   Lihat Detail
- </Button>
-)}
+                variant="outline"
+                className="w-full mt-2 gap-2 bg-transparent"
+                onClick={() => router.push("/hasil")}
+              >
+                <LeafIcon className="h-4 w-4 text-green-600" />
+                Lihat Detail
+              </Button>
+            )}
 
-            <button
-              onClick={() => setShowLogs(!showLogs)}
-              className="text-xs mt-2 text-muted-foreground"
-            >
+            <button onClick={() => setShowLogs(!showLogs)} className="text-xs mt-2 text-muted-foreground">
               {showLogs ? "Sembunyikan log" : "Tampilkan log"}
             </button>
 
@@ -372,11 +345,7 @@ const scanResult: ScanResult = {
               </div>
             )}
 
-            {error && (
-              <div className="text-sm text-destructive mt-2">
-                {error}
-              </div>
-            )}
+            {error && <div className="text-sm text-destructive mt-2">{error}</div>}
           </>
         )}
       </Card>
