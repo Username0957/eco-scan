@@ -1,11 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
-import { UploadIcon, ScanIcon, LoaderIcon, LeafIcon, SparklesIcon } from "@/components/icons"
-import { analyzeImageHybrid } from "@/lib/heuristic-classifier"
+import * as React from "react";
+import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  UploadIcon,
+  ScanIcon,
+  LoaderIcon,
+  LeafIcon,
+  SparklesIcon,
+} from "@/components/icons";
+import { analyzeImageHybrid } from "@/lib/heuristic-classifier";
 import {
   mapPlasticCode,
   getDecompositionTime,
@@ -14,18 +20,18 @@ import {
   getPlasticDescription,
   getEducationDescription,
   getEducationTips,
-} from "@/lib/types"
-import { saveScanResult, updateGlobalStats } from "@/lib/firestore"
+} from "@/lib/types";
+import { saveScanResult, updateGlobalStats } from "@/lib/firestore";
 
 /* =========================
    TYPES
 ========================= */
 interface OverlayResult {
-  type: string
-  confidence: number
-  decompositionTime: string
-  microplasticRisk: string
-  ecoAlternative: string
+  type: string;
+  confidence: number;
+  decompositionTime: string;
+  microplasticRisk: string;
+  ecoAlternative: string;
 }
 
 type DetectedObject = {
@@ -39,150 +45,155 @@ type DetectedObject = {
 }
 
 type ScanResult = {
-  totalObjects: number
-  objects: DetectedObject[]
-  scanDate: string
+  totalObjects: number;
+  objects: DetectedObject[];
+  scanDate: string;
   education: {
-    title: string
-    description: string
-    tips: string[]
-  }
-}
+    title: string;
+    description: string;
+    tips: string[];
+  };
+};
 
 interface HeuristicResult {
-  plasticType: string
-  plasticCode: string
-  objectName: string
+  plasticType: string;
+  plasticCode: string;
+  objectName: string;
 }
 
 interface AISuggestions {
   detailedAlternatives?: {
-    name: string
-    description: string
-    benefits: string[]
-    whereToGet: string
-    priceRange: string
-  }[]
+    name: string;
+    description: string;
+    benefits: string[];
+    whereToGet: string;
+    priceRange: string;
+  }[];
   environmentalImpact?: {
-    problem: string
-    solution: string
-    funFact: string
-  }
-  provider?: string
-}
-
-interface EducationInfo {
-  title: string
-  description: string
-  tips: string[]
+    problem: string;
+    solution: string;
+    funFact: string;
+  };
+  provider?: string;
 }
 
 /* =========================
    COMPONENT
 ========================= */
-export function UploadSection() {
-  const router = useRouter()
-  const [loading, setLoading] = React.useState(false)
+export default function UploadSection() {
+  const router = useRouter();
 
-  const [image, setImage] = React.useState<string | null>(null)
-  const [isScanning, setIsScanning] = React.useState(false)
-  const [error, setError] = React.useState<string | null>(null)
+  const [image, setImage] = React.useState<string | null>(null);
+  const [isScanning, setIsScanning] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
 
-  const [overlayResult, setOverlayResult] = React.useState<OverlayResult | null>(null)
-  const [heuristicResult, setHeuristicResult] = React.useState<HeuristicResult | null>(null)
+  const [overlayResult, setOverlayResult] =
+    React.useState<OverlayResult | null>(null);
+  const [heuristicResult, setHeuristicResult] =
+    React.useState<HeuristicResult | null>(null);
 
-  const [logs, setLogs] = React.useState<string[]>([])
-  const [showLogs, setShowLogs] = React.useState(false)
+  const [logs, setLogs] = React.useState<string[]>([]);
+  const [showLogs, setShowLogs] = React.useState(false);
 
-  const [aiSuggestions, setAISuggestions] = React.useState<AISuggestions | null>(null)
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = React.useState(false)
-  const [showSuggestions, setShowSuggestions] = React.useState(false)
+  const [aiSuggestions, setAISuggestions] =
+    React.useState<AISuggestions | null>(null);
+  const [isLoadingSuggestions, setIsLoadingSuggestions] = React.useState(false);
+  const [showSuggestions, setShowSuggestions] = React.useState(false);
 
-  const scanInProgressRef = React.useRef(false)
-  const fileInputRef = React.useRef<HTMLInputElement>(null)
+  const scanInProgressRef = React.useRef(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   /* =========================
      LOG
   ========================= */
   const addLog = (msg: string) => {
-    setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev])
-  }
+    setLogs((prev) => [`[${new Date().toLocaleTimeString()}] ${msg}`, ...prev]);
+  };
 
   /* =========================
      BASE64 → IMAGEDATA
   ========================= */
   async function base64ToImageData(base64: string) {
     return new Promise<{
-      imageData: ImageData
-      imageEl: HTMLImageElement
+      imageData: ImageData;
+      imageEl: HTMLImageElement;
     }>((resolve, reject) => {
-      const img = new Image()
-      img.crossOrigin = "anonymous"
+      const img = new Image();
+      img.crossOrigin = "anonymous";
       img.onload = () => {
-        const canvas = document.createElement("canvas")
-        canvas.width = img.width
-        canvas.height = img.height
-        const ctx = canvas.getContext("2d")
-        if (!ctx) return reject("Canvas error")
-        ctx.drawImage(img, 0, 0)
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return reject("Canvas error");
+        ctx.drawImage(img, 0, 0);
         resolve({
           imageData: ctx.getImageData(0, 0, canvas.width, canvas.height),
           imageEl: img,
-        })
-      }
-      img.onerror = reject
-      img.src = base64
-    })
+        });
+      };
+      img.onerror = reject;
+      img.src = base64;
+    });
   }
 
   /* =========================
      SCAN (TIDAK DIUBAH)
   ========================= */
   const performQuickScan = async () => {
-    if (!image || scanInProgressRef.current) return
+    if (!image || scanInProgressRef.current) return;
 
-    scanInProgressRef.current = true
-    setIsScanning(true)
-    setError(null)
-    setAISuggestions(null)
+    scanInProgressRef.current = true;
+    setIsScanning(true);
+    setError(null);
+    setAISuggestions(null);
 
     try {
-      addLog("Menyiapkan gambar...")
-      const { imageData, imageEl } = await base64ToImageData(image)
+      addLog("Menyiapkan gambar...");
+      const { imageData, imageEl } = await base64ToImageData(image);
 
-      addLog("Analisis hybrid (Heuristic + TM)...")
-      const result = await analyzeImageHybrid(imageData, imageEl)
+      addLog("Analisis hybrid (Heuristic + TM)...");
+      const result = await analyzeImageHybrid(imageData, imageEl);
 
-      addLog(`Terdeteksi ${result.material} (${Math.round(result.confidence * 100)}%)`)
+      addLog(
+        `Terdeteksi ${result.material} (${Math.round(
+          result.confidence * 100
+        )}%)`
+      );
 
       setOverlayResult({
         type: result.material,
         confidence: result.confidence,
         decompositionTime: "±100–500 tahun",
-        microplasticRisk: result.material === "PS" || result.material === "PVC" ? "Tinggi" : "Sedang",
+        microplasticRisk:
+          result.material === "PS" || result.material === "PVC"
+            ? "Tinggi"
+            : "Sedang",
         ecoAlternative: "Gunakan alternatif pakai ulang atau biodegradable",
-      })
+      });
 
       setHeuristicResult({
         plasticType: result.material,
         plasticCode: "-",
         objectName: result.material,
-      })
+      });
 
-      const objects: DetectedObject[] = []
+      const detectedType = result.material;
 
-      // hasil dari analyzeImageHybrid
-      const detectedType = result.material // contoh: "PET" | "PP" | "HDPE" | dll
-
-      objects.push({
-        name: "Sampah Plastik Terdeteksi",
-        plasticType: detectedType,
-        plasticCode: mapPlasticCode(detectedType),
-        decompositionTime: getDecompositionTime(detectedType),
-        microplasticRisk: getMicroplasticRisk(detectedType),
-        ecoAlternative: getEcoAlternative(detectedType),
-        description: getPlasticDescription(detectedType),
-      })
+      const objects: DetectedObject[] = [
+        {
+          name: "Sampah Plastik Terdeteksi",
+          plasticType: detectedType,
+          plasticCode: mapPlasticCode(detectedType),
+          decompositionTime: getDecompositionTime(detectedType),
+          microplasticRisk: getMicroplasticRisk(detectedType) as
+            | "Rendah"
+            | "Sedang"
+            | "Tinggi",
+          ecoAlternative: getEcoAlternative(detectedType),
+          description: getPlasticDescription(detectedType),
+        },
+      ];
 
       const scanResult: ScanResult = {
         totalObjects: objects.length,
@@ -191,59 +202,60 @@ export function UploadSection() {
         education: {
           title: `Kenapa plastik ${detectedType} berbahaya?`,
           description:
-            getEducationDescription(detectedType) || "Plastik ini dapat membahayakan lingkungan dan kehidupan laut",
-          tips: (getEducationTips(detectedType) as string[]) || [
+            getEducationDescription(detectedType) ||
+            "Plastik ini berdampak buruk bagi lingkungan",
+          tips: getEducationTips(detectedType) || [
             "Gunakan alternatif ramah lingkungan",
-            "Kurangi penggunaan plastik",
+            "Kurangi plastik sekali pakai",
           ],
-        } as EducationInfo,
-      }
+        },
+      };
 
-      /* ===============================
-         SIMPAN KE SESSION
-      =============================== */
-      sessionStorage.setItem("scanResult", JSON.stringify(scanResult))
+      sessionStorage.setItem("scanResult", JSON.stringify(scanResult));
 
       try {
-        await saveScanResult(scanResult)
-        await updateGlobalStats(scanResult)
-        addLog("Data tersimpan ke Firestore")
-      } catch (firebaseError) {
-        console.error("Firebase error:", firebaseError)
-        addLog("Peringatan: Data lokal tersimpan, tapi belum ke server")
+        await saveScanResult(scanResult);
+        await updateGlobalStats(scanResult);
+        addLog("Data tersimpan ke Firestore");
+      } catch {
+        addLog("Data tersimpan lokal (Firestore gagal)");
       }
     } catch (e) {
-      console.error(e)
-      setError("Gagal menganalisis gambar")
-      addLog("Error saat analisis")
+      console.error(e);
+      setError("Gagal menganalisis gambar");
+      addLog("Error saat analisis");
     } finally {
-      setIsScanning(false)
-      scanInProgressRef.current = false
+      setIsScanning(false);
+      scanInProgressRef.current = false;
     }
-  }
+  };
 
   /* =========================
-     AI SUGGESTIONS
+     AI SUGGESTIONS (SAFE)
   ========================= */
   const fetchAISuggestions = async () => {
-    if (!heuristicResult) return
-    setIsLoadingSuggestions(true)
-    setShowSuggestions(true)
+    if (!heuristicResult) return;
+    setIsLoadingSuggestions(true);
+    setShowSuggestions(true);
 
     try {
       const res = await fetch("/api/suggestions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(heuristicResult),
-      })
-      const data = await res.json()
-      setAISuggestions(data)
+      });
+
+      if (!res.ok) throw new Error("AI response error");
+
+      const data = await res.json();
+      setAISuggestions(data);
     } catch {
-      setError("Gagal memuat saran AI")
+      setAISuggestions(null);
+      addLog("AI gagal, menggunakan data lokal");
     } finally {
-      setIsLoadingSuggestions(false)
+      setIsLoadingSuggestions(false);
     }
-  }
+  };
 
   /* =========================
      UI
@@ -254,38 +266,32 @@ export function UploadSection() {
         {!image ? (
           <label className="flex flex-col items-center gap-4 cursor-pointer">
             <UploadIcon className="h-10 w-10 text-primary" />
-            <p className="text-sm text-muted-foreground">Upload gambar sampah plastik</p>
+            <p className="text-sm text-muted-foreground">
+              Upload gambar sampah plastik
+            </p>
             <input
               ref={fileInputRef}
               type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                const f = e.target.files?.[0]
-                if (!f) return
-                const r = new FileReader()
-                r.onload = () => setImage(r.result as string)
-                r.readAsDataURL(f)
+                const f = e.target.files?.[0];
+                if (!f) return;
+                const r = new FileReader();
+                r.onload = () => setImage(r.result as string);
+                r.readAsDataURL(f);
               }}
             />
           </label>
         ) : (
           <>
-            <img src={image || "/placeholder.svg"} className="rounded-lg mb-3" alt="preview" />
+            <img src={image} className="rounded-lg mb-3" alt="preview" />
 
-            {overlayResult && (
-              <div className="rounded-lg bg-primary/10 p-3 mb-3 text-sm">
-                <b>{overlayResult.type}</b> ({Math.round(overlayResult.confidence * 100)}%)
-                <br />
-                Terurai: {overlayResult.decompositionTime}
-                <br />
-                Risiko: {overlayResult.microplasticRisk}
-                <br />
-                Alternatif: {overlayResult.ecoAlternative}
-              </div>
-            )}
-
-            <Button onClick={performQuickScan} disabled={isScanning} className="w-full gap-2">
+            <Button
+              onClick={performQuickScan}
+              disabled={isScanning}
+              className="w-full gap-2"
+            >
               {isScanning ? (
                 <>
                   <LoaderIcon className="animate-spin h-4 w-4" />
@@ -302,30 +308,18 @@ export function UploadSection() {
             {heuristicResult && (
               <Button
                 variant="outline"
-                className="w-full mt-2 bg-transparent"
+                className="w-full mt-2"
                 onClick={fetchAISuggestions}
-                disabled={isLoadingSuggestions}
               >
                 <SparklesIcon className="h-4 w-4 mr-2" />
                 Saran AI
               </Button>
             )}
 
-            {showSuggestions && aiSuggestions && (
-              <div className="mt-3 text-sm bg-muted p-3 rounded">
-                <b>Saran AI</b>
-                {aiSuggestions.detailedAlternatives?.map((a, i) => (
-                  <div key={i} className="mt-2">
-                    <b>{a.name}</b>
-                    <p>{a.description}</p>
-                  </div>
-                ))}
-              </div>
-            )}
             {overlayResult && (
               <Button
                 variant="outline"
-                className="w-full mt-2 gap-2 bg-transparent"
+                className="w-full mt-2 gap-2"
                 onClick={() => router.push("/hasil")}
               >
                 <LeafIcon className="h-4 w-4 text-green-600" />
@@ -333,7 +327,10 @@ export function UploadSection() {
               </Button>
             )}
 
-            <button onClick={() => setShowLogs(!showLogs)} className="text-xs mt-2 text-muted-foreground">
+            <button
+              onClick={() => setShowLogs(!showLogs)}
+              className="text-xs mt-2 text-muted-foreground"
+            >
               {showLogs ? "Sembunyikan log" : "Tampilkan log"}
             </button>
 
@@ -345,10 +342,12 @@ export function UploadSection() {
               </div>
             )}
 
-            {error && <div className="text-sm text-destructive mt-2">{error}</div>}
+            {error && (
+              <div className="text-sm text-destructive mt-2">{error}</div>
+            )}
           </>
         )}
       </Card>
     </div>
-  )
+  );
 }

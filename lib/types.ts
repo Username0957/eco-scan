@@ -1,4 +1,4 @@
-export interface DetectedObject {
+type DetectedObject = {
   name: string
   plasticType: string
   plasticCode: string
@@ -7,6 +7,7 @@ export interface DetectedObject {
   ecoAlternative: string
   description: string
 }
+
 
 export interface EducationInfo {
   title: string
