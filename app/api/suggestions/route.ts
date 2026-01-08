@@ -1,47 +1,41 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { checkRateLimit } from "@/lib/rate-limit"
 
+const SUGGESTION_PROMPT = `You are an environmental and plastic recycling expert. Based on the plastic type provided, give DETAILED personal and useful advice in English context.
 
-const SUGGESTION_PROMPT = `Kamu adalah ahli lingkungan dan daur ulang plastik Indonesia. Berdasarkan jenis plastik yang diberikan, berikan saran DETAIL yang personal dan bermanfaat untuk konteks Indonesia.
-
-Format respons (JSON):
+Response format (JSON):
 {
   "detailedAlternatives": [
     {
-      "name": "nama alternatif",
-      "description": "deskripsi lengkap",
+      "name": "alternative name",
+      "description": "detailed description",
       "benefits": ["benefit 1", "benefit 2"],
-      "whereToGet": "tempat mendapatkannya di Indonesia",
-      "priceRange": "kisaran harga dalam Rupiah"
+      "whereToGet": "where to get it",
+      "priceRange": "price range in USD"
     }
   ],
   "disposalTips": [
     {
-      "step": "langkah",
-      "description": "deskripsi detail"
+      "step": "step",
+      "description": "detailed description"
     }
   ],
   "environmentalImpact": {
-    "problem": "masalah lingkungan dari plastik ini",
-    "solution": "solusi yang bisa dilakukan",
-    "funFact": "fakta menarik"
+    "problem": "environmental problem from this plastic",
+    "solution": "solution that can be done",
+    "funFact": "interesting fact"
   },
   "localInfo": {
-    "recyclingLocations": "informasi tempat daur ulang di Indonesia",
-    "communityTips": "tips dari komunitas lokal"
+    "recyclingLocations": "information about recycling facilities",
+    "communityTips": "tips from local communities"
   }
 }`
-/* ===============================
-   RATE LIMIT CONFIG
-================================ */
+
 const RATE_LIMIT_CONFIG = {
   maxRequests: 20,
   windowMs: 60 * 1000,
 }
 
-/* ===============================
-   CLIENT IP
-================================ */
 function getClientIP(request: NextRequest): string {
   const forwarded = request.headers.get("x-forwarded-for")
   const realIP = request.headers.get("x-real-ip")
@@ -50,126 +44,111 @@ function getClientIP(request: NextRequest): string {
   return "unknown"
 }
 
-/* ===============================
-   POST HANDLER (FINAL)
-================================ */
 export async function POST(request: NextRequest) {
   try {
     const clientIP = getClientIP(request)
-    const rateLimit = checkRateLimit(
-      clientIP + "-suggestions",
-      RATE_LIMIT_CONFIG
-    )
+    const rateLimit = checkRateLimit(clientIP + "-suggestions", RATE_LIMIT_CONFIG)
 
     if (!rateLimit.success) {
       return NextResponse.json(
         {
-          error: "Terlalu banyak permintaan",
+          error: "Too many requests",
           retryAfter: rateLimit.retryAfter,
         },
-        { status: 429 }
+        { status: 429 },
       )
     }
 
     const { plasticType } = await request.json()
 
     if (!plasticType) {
-      return NextResponse.json(
-        { error: "Jenis plastik tidak ditemukan" },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: "Plastic type not found" }, { status: 400 })
     }
 
-    /* ===============================
-       TRY GEMINI AI
-    =============================== */
+    /* Try Gemini AI */
     if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-  try {
-    const aiResponse = await fetch(
-      "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" +
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-       {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: "user",
-              parts: [
+      try {
+        const aiResponse = await fetch(
+          "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=" +
+            process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              contents: [
                 {
-                  text: `
-⚠️ PENTING:
-- JANGAN menulis kalimat pembuka
-- JANGAN menulis penutup
-- JANGAN menulis teks di luar JSON
-- WAJIB balas dalam 1 JSON object valid
+                  role: "user",
+                  parts: [
+                    {
+                      text: `
+⚠️ IMPORTANT:
+- DO NOT write opening sentences
+- DO NOT write closing text
+- DO NOT write text outside of JSON
+- MUST reply with 1 valid JSON object
 
 ${SUGGESTION_PROMPT}
 
-Jenis plastik: ${plasticType}
+Plastic type: ${plasticType}
 `,
+                    },
+                  ],
                 },
               ],
-            },
-          ],
-        }),
+            }),
+          },
+        )
+
+        if (!aiResponse.ok) {
+          throw new Error("Gemini HTTP error")
+        }
+
+        const aiData = await aiResponse.json()
+        const rawText = aiData?.candidates?.[0]?.content?.parts?.[0]?.text
+
+        if (!rawText) {
+          throw new Error("Gemini empty response")
+        }
+
+        /* Strict JSON extraction */
+        const start = rawText.indexOf("{")
+        const end = rawText.lastIndexOf("}")
+
+        if (start === -1 || end === -1 || end <= start) {
+          throw new Error("No JSON found in Gemini response")
+        }
+
+        const jsonString = rawText.slice(start, end + 1)
+        const parsed = JSON.parse(jsonString)
+
+        return NextResponse.json({
+          ...parsed,
+          provider: "gemini",
+        })
+      } catch (error) {
+        console.warn(
+          "[v0] Gemini failed, fallback to default alternatives:",
+          error instanceof Error ? error.message : String(error),
+        )
+        // Continue to fallback below
       }
-    ) 
-
-    if (!aiResponse.ok) {
-      throw new Error("Gemini HTTP error")
     }
 
-    const aiData = await aiResponse.json()
-    const rawText =
-      aiData?.candidates?.[0]?.content?.parts?.[0]?.text
-
-    if (!rawText) {
-      throw new Error("Gemini empty response")
-    }
-
-    /* ===============================
-       STRICT JSON EXTRACTION
-    =============================== */
-    const start = rawText.indexOf("{")
-    const end = rawText.lastIndexOf("}")
-
-    if (start === -1 || end === -1 || end <= start) {
-      throw new Error("No JSON found in Gemini response")
-    }
-
-    const jsonString = rawText.slice(start, end + 1)
-    const parsed = JSON.parse(jsonString)
-
-    return NextResponse.json({
-      ...parsed,
-      provider: "gemini",
-    })
-  } catch (error) {
-    console.warn(
-      "Gemini gagal, fallback ke default alternatives:",
-      error
-    )
-  }
-}
-    /* ===============================
-       FINAL FALLBACK (SESUI PERMINTAAN)
-    =============================== */
-    return NextResponse.json({
+    /* Final fallback */
+    const fallbackData = {
       detailedAlternatives: getDefaultAlternatives(plasticType),
-      disposalTips: [],
-      environmentalImpact: null,
-      localInfo: null,
+      disposalTips: getDefaultDisposalTips(plasticType),
+      environmentalImpact: getDefaultEnvironmentalImpact(plasticType),
+      localInfo: getDefaultLocalInfo(plasticType),
       provider: "local",
-    })
+    }
+    console.log("[v0] Using local fallback for plastic type:", plasticType)
+    return NextResponse.json(fallbackData)
   } catch (error) {
-    console.error("Suggestions API Error:", error)
-    return NextResponse.json(
-      { error: "Terjadi kesalahan server" },
-      { status: 500 }
-    )
+    console.error("[v0] Suggestions API Error:", error)
+    return NextResponse.json({ error: "Server error" }, { status: 500 })
   }
 }
 
@@ -180,80 +159,75 @@ function getDefaultAlternatives(plasticType: string) {
   > = {
     "PET (Polyethylene Terephthalate)": [
       {
-        name: "Botol Tumbler Stainless Steel",
-        description: "Botol minum berbahan stainless steel food grade yang tahan lama dan tidak mengandung BPA",
-        benefits: [
-          "Tahan lama hingga 10+ tahun",
-          "Tidak ada rasa plastik",
-          "Mudah dibersihkan",
-          "Menjaga suhu minuman",
-        ],
-        whereToGet: "Tokopedia, Shopee, IKEA, atau toko peralatan dapur",
-        priceRange: "Rp 50.000 - Rp 300.000",
+        name: "Stainless Steel Tumbler",
+        description: "Food-grade stainless steel water bottle that is durable and BPA-free",
+        benefits: ["Lasts 10+ years", "No plastic taste", "Easy to clean", "Keeps drink temperature stable"],
+        whereToGet: "Amazon, Target, Costco, or kitchenware stores",
+        priceRange: "$15 - $50",
       },
       {
-        name: "Botol Kaca dengan Sleeve",
-        description: "Botol kaca dengan pelindung silikon atau kain untuk mencegah pecah",
-        benefits: ["100% bebas plastik", "Tidak menyerap bau", "Mudah dicuci", "Estetik"],
-        whereToGet: "IKEA, ACE Hardware, atau marketplace online",
-        priceRange: "Rp 30.000 - Rp 150.000",
+        name: "Glass Bottle with Sleeve",
+        description: "Glass bottle with silicone or fabric protective cover to prevent breakage",
+        benefits: ["100% plastic-free", "No odor absorption", "Easy to wash", "Aesthetic"],
+        whereToGet: "IKEA, Amazon, or eco-friendly stores",
+        priceRange: "$10 - $40",
       },
     ],
     "LDPE (Low-Density Polyethylene)": [
       {
-        name: "Tas Belanja Kanvas",
-        description: "Tas belanja berbahan kanvas tebal yang dapat dilipat dan dicuci",
-        benefits: ["Dapat digunakan 1000+ kali", "Mudah dilipat", "Dapat dicuci mesin", "Kuat menahan beban berat"],
-        whereToGet: "Miniso, Pasar tradisional, atau toko online eco-friendly",
-        priceRange: "Rp 15.000 - Rp 75.000",
+        name: "Canvas Shopping Bag",
+        description: "Thick canvas bag that can be folded and washed repeatedly",
+        benefits: ["Can be used 1000+ times", "Easy to fold", "Machine washable", "Holds heavy items well"],
+        whereToGet: "Target, Whole Foods, local markets, or online eco-shops",
+        priceRange: "$5 - $25",
       },
       {
-        name: "Tas Jaring (Mesh Bag)",
-        description: "Tas jaring untuk belanja sayur dan buah yang breathable",
-        benefits: ["Sayur/buah tetap segar", "Sangat ringan", "Mudah dibersihkan", "Hemat tempat"],
-        whereToGet: "Pasar tradisional atau online shop eco-friendly",
-        priceRange: "Rp 10.000 - Rp 50.000",
+        name: "Mesh Shopping Bag",
+        description: "Mesh bag for fresh produce that allows items to breathe",
+        benefits: ["Produce stays fresh", "Very lightweight", "Easy to clean", "Space-saving"],
+        whereToGet: "Local markets or eco-friendly online shops",
+        priceRange: "$3 - $15",
       },
     ],
     "PP (Polypropylene)": [
       {
-        name: "Sedotan Stainless Steel Set",
-        description: "Set sedotan stainless steel dengan sikat pembersih dan pouch",
-        benefits: ["Dapat digunakan seumur hidup", "Mudah dibersihkan", "Portable", "Berbagai ukuran tersedia"],
-        whereToGet: "Tokopedia, Shopee, atau toko eco-friendly",
-        priceRange: "Rp 15.000 - Rp 50.000",
+        name: "Stainless Steel Straws Set",
+        description: "Set of stainless steel straws with cleaning brush and carrying pouch",
+        benefits: ["Lifetime use", "Easy to clean", "Portable", "Various sizes available"],
+        whereToGet: "Amazon, Target, Costco",
+        priceRange: "$5 - $20",
       },
       {
-        name: "Sedotan Bambu",
-        description: "Sedotan dari bambu alami yang biodegradable",
-        benefits: ["100% alami", "Biodegradable", "Ringan", "Aesthetic"],
-        whereToGet: "Toko kerajinan atau online marketplace",
-        priceRange: "Rp 5.000 - Rp 25.000",
+        name: "Bamboo Straws",
+        description: "Straws made from natural bamboo that are biodegradable",
+        benefits: ["100% natural", "Biodegradable", "Lightweight", "Aesthetic"],
+        whereToGet: "Craft stores or online marketplaces",
+        priceRange: "$2 - $10",
       },
     ],
     "PS (Polystyrene)": [
       {
-        name: "Wadah Makanan Bambu",
-        description: "Wadah makanan dari serat bambu yang biodegradable",
-        benefits: ["100% alami", "Biodegradable dalam 6 bulan", "Ringan", "Microwave safe"],
-        whereToGet: "Toko peralatan makan eco-friendly",
-        priceRange: "Rp 25.000 - Rp 100.000",
+        name: "Bamboo Fiber Food Container",
+        description: "Food container made from biodegradable bamboo fiber",
+        benefits: ["100% natural", "Biodegradable in 6 months", "Lightweight", "Microwave safe"],
+        whereToGet: "Eco-friendly kitchenware stores",
+        priceRange: "$8 - $35",
       },
       {
-        name: "Kotak Makan Stainless Steel",
-        description: "Kotak makan dari stainless steel dengan sekat",
-        benefits: ["Tahan lama", "Tidak bocor", "Mudah dibersihkan", "Food grade"],
-        whereToGet: "Lock&Lock store, department store",
-        priceRange: "Rp 75.000 - Rp 250.000",
+        name: "Stainless Steel Lunch Box",
+        description: "Stainless steel lunch box with compartments",
+        benefits: ["Durable", "Leak-proof", "Easy to clean", "Food-grade"],
+        whereToGet: "Amazon, Target, department stores",
+        priceRange: "$25 - $80",
       },
     ],
     "HDPE (High-Density Polyethylene)": [
       {
-        name: "Wadah Kaca dengan Tutup Bambu",
-        description: "Wadah penyimpanan kaca dengan tutup dari bambu",
-        benefits: ["Tahan lama", "Tidak menyerap bau", "Estetik", "Ramah lingkungan"],
-        whereToGet: "IKEA, ACE Hardware, atau toko online",
-        priceRange: "Rp 50.000 - Rp 200.000",
+        name: "Glass Container with Bamboo Lid",
+        description: "Glass storage container with bamboo lid",
+        benefits: ["Durable", "Does not absorb odors", "Aesthetic", "Eco-friendly"],
+        whereToGet: "IKEA, Amazon, or online stores",
+        priceRange: "$15 - $60",
       },
     ],
   }
@@ -270,84 +244,88 @@ function getDefaultAlternatives(plasticType: string) {
 
 function getDefaultDisposalTips(plasticType: string) {
   const tips: Record<string, Array<{ step: string; description: string }>> = {
-    PET: [
-      { step: "Kosongkan isi", description: "Pastikan botol sudah benar-benar kosong dari cairan" },
-      { step: "Bilas bersih", description: "Bilas dengan air untuk menghilangkan sisa minuman yang bisa menarik hama" },
-      { step: "Lepaskan tutup", description: "Pisahkan tutup botol karena biasanya berbeda jenis plastiknya (HDPE)" },
-      { step: "Kempiskan", description: "Tekan botol agar kempes untuk menghemat ruang" },
-      { step: "Kumpulkan", description: "Kumpulkan di wadah khusus plastik PET sebelum disetor ke bank sampah" },
+    "PET (Polyethylene Terephthalate)": [
+      { step: "1. Rinse", description: "Rinse the plastic bottle thoroughly with water" },
+      { step: "2. Remove label", description: "Remove the plastic label if possible" },
+      { step: "3. Crush", description: "Crush the bottle to save space" },
+      { step: "4. Sort", description: "Place in the correct recycling bin" },
     ],
-    LDPE: [
-      { step: "Bersihkan", description: "Bersihkan dari sisa makanan atau kotoran" },
-      { step: "Keringkan", description: "Pastikan kantong kering sebelum disimpan" },
-      { step: "Lipat rapi", description: "Lipat rapi untuk menghemat tempat" },
-      { step: "Kumpulkan", description: "Kumpulkan minimal 1kg sebelum disetor ke bank sampah" },
+    "LDPE (Low-Density Polyethylene)": [
+      { step: "1. Clean", description: "Clean plastic bags and films thoroughly" },
+      { step: "2. Dry", description: "Make sure they are completely dry" },
+      { step: "3. Bundle", description: "Bundle similar items together" },
+      { step: "4. Recycle", description: "Check local recycling centers for film collection" },
     ],
-    PP: [
-      { step: "Bersihkan", description: "Cuci bersih dari sisa makanan" },
-      { step: "Keringkan", description: "Pastikan benar-benar kering" },
-      { step: "Pisahkan", description: "Pisahkan dari jenis plastik lain" },
-      { step: "Setor", description: "Setor ke bank sampah atau tempat daur ulang" },
+    "PP (Polypropylene)": [
+      { step: "1. Clean", description: "Remove food residue from containers" },
+      { step: "2. Dry", description: "Let containers dry completely" },
+      { step: "3. Stack", description: "Stack containers neatly" },
+      { step: "4. Place", description: "Place in your recycling bin" },
     ],
-    PS: [
-      { step: "Jangan hancurkan", description: "Jangan remukkan styrofoam karena akan menyebar sebagai mikroplastik" },
-      { step: "Simpan utuh", description: "Simpan dalam keadaan utuh jika memungkinkan" },
-      { step: "Cari dropbox", description: "Cari dropbox khusus styrofoam (masih jarang di Indonesia)" },
-      { step: "Hindari", description: "Untuk ke depannya, hindari penggunaan styrofoam" },
+    "PS (Polystyrene)": [
+      { step: "1. Separate", description: "Keep foam items separate from other plastic" },
+      { step: "2. Avoid compression", description: "Do not compress foam as it breaks apart" },
+      { step: "3. Find special location", description: "Many recycling centers have specific drop-offs for foam" },
+      { step: "4. Ask locally", description: "Contact your local waste management for options" },
+    ],
+    "HDPE (High-Density Polyethylene)": [
+      { step: "1. Clean", description: "Rinse containers thoroughly" },
+      { step: "2. Cap", description: "Keep caps on containers" },
+      { step: "3. Place", description: "Put in recycling bin" },
+      { step: "4. Monitor", description: "Check for any hazardous materials" },
     ],
   }
 
-  // Find matching key
   for (const [key, value] of Object.entries(tips)) {
-    if (plasticType.includes(key)) {
+    if (plasticType.includes(key) || key.includes(plasticType)) {
       return value
     }
   }
 
-  return tips["PET"]
+  return tips["PET (Polyethylene Terephthalate)"]
 }
 
-function getDefaultImpact(plasticType: string) {
+function getDefaultEnvironmentalImpact(plasticType: string) {
   const impacts: Record<string, { problem: string; solution: string; funFact: string }> = {
-    PET: {
-      problem:
-        "Botol PET membutuhkan 450 tahun untuk terurai dan sering berakhir di lautan, membahayakan kehidupan laut",
-      solution:
-        "Dengan mendaur ulang 1 botol PET, kita menghemat energi yang cukup untuk menyalakan lampu 100W selama 4 jam",
-      funFact: "Indonesia adalah penyumbang sampah plastik ke laut terbesar kedua di dunia setelah China",
+    "PET (Polyethylene Terephthalate)": {
+      problem: "PET bottles take 400+ years to decompose, harming marine life",
+      solution: "Use refillable containers and support plastic-free packaging initiatives",
+      funFact: "One PET bottle can be recycled into 5 new bottles",
     },
-    LDPE: {
-      problem: "Kantong plastik LDPE adalah pembunuh utama penyu laut yang mengira kantong plastik adalah ubur-ubur",
-      solution: "Menggunakan tas belanja reusable dapat mengurangi 500+ kantong plastik per orang per tahun",
-      funFact: "Rata-rata kantong plastik hanya digunakan selama 12 menit tapi butuh 500-1000 tahun untuk terurai",
+    "LDPE (Low-Density Polyethylene)": {
+      problem: "Plastic bags often end up in oceans, killing sea turtles and birds",
+      solution: "Switch to reusable cloth bags and support legislation banning single-use bags",
+      funFact: "A plastic bag is used for 12 minutes but takes 20 years to decompose",
     },
-    PP: {
-      problem: "Sedotan dan wadah PP sering ditemukan di dalam tubuh hewan laut dan burung",
-      solution: "Membawa sedotan dan wadah sendiri dapat mengurangi sampah plastik secara signifikan",
-      funFact: "Lebih dari 8 miliar sedotan plastik mencemari pantai di seluruh dunia setiap tahun",
+    "PP (Polypropylene)": {
+      problem: "Breaks down into microplastics that contaminate food chains",
+      solution: "Buy from package-free stores and reduce plastic consumption",
+      funFact: "PP is one of the most recycled plastics, with a 25-30% recycling rate",
     },
-    PS: {
-      problem: "Styrofoam tidak dapat didaur ulang dan akan pecah menjadi jutaan partikel mikroplastik",
-      solution: "Membawa wadah makanan sendiri saat membeli makanan dapat mengurangi 90% sampah styrofoam personal",
-      funFact: "Styrofoam ditemukan di 100% sampel air laut yang diteliti di seluruh dunia",
+    "PS (Polystyrene)": {
+      problem: "Foam products easily fragment into microplastics that persist for decades",
+      solution: "Avoid takeout containers and ask restaurants for compostable alternatives",
+      funFact: "Styrofoam takes over 500 years to decompose",
+    },
+    "HDPE (High-Density Polyethylene)": {
+      problem: "Milk jugs and plastic bags harm wildlife through entanglement",
+      solution: "Use glass milk containers and avoid plastic bags",
+      funFact: "HDPE is recycled into lumber, playground equipment, and park benches",
     },
   }
 
-  // Find matching key
   for (const [key, value] of Object.entries(impacts)) {
-    if (plasticType.includes(key)) {
+    if (plasticType.includes(key) || key.includes(plasticType)) {
       return value
     }
   }
 
-  return impacts["PET"]
+  return impacts["PET (Polyethylene Terephthalate)"]
 }
 
-function getDefaultLocalInfo() {
+function getDefaultLocalInfo(plasticType: string) {
   return {
-    recyclingLocations:
-      "Cari 'Bank Sampah' terdekat melalui aplikasi atau website dinas lingkungan hidup kotamu. Beberapa supermarket seperti Alfamart dan Indomaret juga menerima botol plastik. Di Jakarta, kamu bisa menggunakan aplikasi 'Waste4Change' untuk penjemputan sampah.",
-    communityTips:
-      "Bergabunglah dengan komunitas zero waste lokal seperti Indonesia Bebas Sampah, Gerakan Indonesia Diet Kantong Plastik, atau Zero Waste Indonesia untuk tips dan motivasi. Ikuti juga akun @waste4change dan @zerowaste.id di Instagram.",
+    recyclingLocations: "Visit Earth911.com or your local waste management authority for recycling centers near you",
+    communityTips: "Join local environmental groups to organize community cleanup events and plastic-free initiatives",
   }
 }

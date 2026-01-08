@@ -23,11 +23,11 @@ import Link from "next/link"
 
 function getRiskColor(risk: string) {
   switch (risk) {
-    case "Rendah":
+    case "Low":
       return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-    case "Sedang":
+    case "Medium":
       return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-    case "Tinggi":
+    case "High":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
     default:
       return "bg-muted text-muted-foreground"
@@ -60,7 +60,7 @@ function ObjectCard({ object, index }: { object: DetectedObject; index: number }
           <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
             <ClockIcon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Waktu Terurai</p>
+              <p className="text-xs font-medium text-muted-foreground">Decomposition Time</p>
               <p className="font-semibold text-foreground">{object.decompositionTime}</p>
             </div>
           </div>
@@ -68,7 +68,7 @@ function ObjectCard({ object, index }: { object: DetectedObject; index: number }
           <div className="flex items-start gap-3 rounded-lg bg-muted/50 p-3">
             <ShieldAlertIcon className="h-5 w-5 text-muted-foreground shrink-0 mt-0.5" />
             <div>
-              <p className="text-xs font-medium text-muted-foreground">Risiko Mikroplastik</p>
+              <p className="text-xs font-medium text-muted-foreground">Microplastic Risk</p>
               <Badge className={cn("mt-1", getRiskColor(object.microplasticRisk))}>{object.microplasticRisk}</Badge>
             </div>
           </div>
@@ -77,7 +77,7 @@ function ObjectCard({ object, index }: { object: DetectedObject; index: number }
         <div className="flex items-start gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
           <RecycleIcon className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div>
-            <p className="text-xs font-medium text-primary">Alternatif Eco-Friendly</p>
+            <p className="text-xs font-medium text-primary">Eco-Friendly Alternative</p>
             <p className="text-sm text-foreground">{object.ecoAlternative}</p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function ResultsPage() {
         <main className="flex flex-1 items-center justify-center">
           <div className="text-center">
             <SparklesIcon className="mx-auto h-12 w-12 animate-pulse text-primary" />
-            <p className="mt-4 text-muted-foreground">Memuat hasil...</p>
+            <p className="mt-4 text-muted-foreground">Loading results...</p>
           </div>
         </main>
         <Footer />
@@ -125,11 +125,11 @@ export default function ResultsPage() {
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted mx-auto">
               <BottleIcon className="h-8 w-8 text-muted-foreground" />
             </div>
-            <h1 className="mb-2 text-xl font-semibold">Tidak Ada Hasil</h1>
-            <p className="mb-6 text-muted-foreground">Silakan scan gambar sampah terlebih dahulu</p>
+            <h1 className="mb-2 text-xl font-semibold">No Results</h1>
+            <p className="mb-6 text-muted-foreground">Please scan a waste image first</p>
             <Button onClick={() => router.push("/")} className="gap-2">
               <ArrowLeftIcon className="h-4 w-4" />
-              Kembali ke Beranda
+              Back to Home
             </Button>
           </div>
         </main>
@@ -151,21 +151,21 @@ export default function ResultsPage() {
             <div>
               <div className="mb-2 flex items-center gap-2">
                 <CheckCircleIcon className="h-6 w-6 text-primary" />
-                <h1 className="text-2xl font-bold text-foreground">Hasil Analisis</h1>
+                <h1 className="text-2xl font-bold text-foreground">Analysis Results</h1>
               </div>
               <p className="text-muted-foreground">
-                {hasObjects ? `${result.totalObjects} objek terdeteksi` : "Tidak ada objek plastik terdeteksi"}
+                {hasObjects ? `${result.totalObjects} object(s) detected` : "No plastic objects detected"}
               </p>
             </div>
 
             <div className="flex gap-2">
               <Button variant="outline" onClick={() => router.push("/")} className="gap-2">
                 <ArrowLeftIcon className="h-4 w-4" />
-                Scan Lagi
+                Scan Again
               </Button>
               <Button onClick={() => router.push("/terima-kasih")} className="gap-2">
                 <CheckCircleIcon className="h-4 w-4" />
-                Selesai
+                Done
               </Button>
             </div>
           </div>
@@ -213,7 +213,7 @@ export default function ResultsPage() {
                   <Link href="/edukasi">
                     <Button variant="outline" className="gap-2 bg-transparent">
                       <BookOpenIcon className="h-4 w-4" />
-                      Pelajari Lebih Lanjut
+                      Learn More
                     </Button>
                   </Link>
                 </div>

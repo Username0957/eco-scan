@@ -3,19 +3,16 @@ type DetectedObject = {
   plasticType: string
   plasticCode: string
   decompositionTime: string
-  microplasticRisk: "Rendah" | "Sedang" | "Tinggi"
+  microplasticRisk: "Low" | "Medium" | "High"
   ecoAlternative: string
   description: string
 }
-
 
 export interface EducationInfo {
   title: string
   description: string
   tips: string[]
 }
-
-
 
 export interface ScanResult {
   id?: string
@@ -25,10 +22,8 @@ export interface ScanResult {
   scanDate: string
   userId?: string
   provider?: "openai" | "gemini" | "local" | "heuristic"
-  analysisMode?: "text" | "vision" | "local" | "heuristic";
+  analysisMode?: "text" | "vision" | "local" | "heuristic"
 }
-
-
 
 export interface GlobalStats {
   totalScans: number
@@ -99,46 +94,46 @@ export function mapPlasticCode(type: string) {
 
 export function getDecompositionTime(type: string) {
   const map: Record<string, string> = {
-    PET: "±450 tahun",
-    HDPE: "±500 tahun",
-    PVC: "≥1000 tahun",
-    LDPE: "±500 tahun",
-    PP: "±400 tahun",
-    PS: "Tidak dapat terurai",
+    PET: "±450 years",
+    HDPE: "±500 years",
+    PVC: "≥1000 years",
+    LDPE: "±500 years",
+    PP: "±400 years",
+    PS: "Cannot decompose",
   }
-  return map[type] ?? "Tidak diketahui"
+  return map[type] ?? "Unknown"
 }
 
-export function getMicroplasticRisk(type: string): "Rendah" | "Sedang" | "Tinggi" {
-  if (type === "PVC" || type === "PS") return "Tinggi"
-  if (type === "PET" || type === "PP") return "Sedang"
-  return "Rendah"
+export function getMicroplasticRisk(type: string): "Low" | "Medium" | "High" {
+  if (type === "PVC" || type === "PS") return "High"
+  if (type === "PET" || type === "PP") return "Medium"
+  return "Low"
 }
 
 export function getEcoAlternative(type: string) {
   const map: Record<string, string> = {
-    PET: "Tumbler stainless steel",
-    HDPE: "Wadah kaca",
-    PVC: "Hindari penggunaan",
-    LDPE: "Tas belanja kain",
-    PP: "Kotak makan reusable",
-    PS: "Wadah bambu",
+    PET: "Stainless steel tumbler",
+    HDPE: "Glass container",
+    PVC: "Avoid use",
+    LDPE: "Cloth shopping bag",
+    PP: "Reusable food container",
+    PS: "Bamboo container",
   }
-  return map[type] ?? "Gunakan produk reusable"
+  return map[type] ?? "Use reusable products"
 }
 
 export function getPlasticDescription(type: string) {
-  return `Plastik jenis ${type} yang terdeteksi dari hasil pemindaian gambar.`
+  return `Plastic type ${type} detected from image scan.`
 }
 
 export function getEducationDescription(type: string) {
-  return `Plastik ${type} membutuhkan waktu sangat lama untuk terurai dan berpotensi mencemari lingkungan serta laut.`
+  return `Plastic ${type} requires an extremely long time to decompose and has potential to contaminate the environment and oceans.`
 }
 
 export function getEducationTips(type: string) {
   return [
-    "Kurangi penggunaan plastik sekali pakai",
-    "Gunakan alternatif ramah lingkungan",
-    "Setor ke bank sampah atau fasilitas daur ulang",
+    "Reduce single-use plastic consumption",
+    "Use eco-friendly alternatives",
+    "Send to recycling centers or waste banks",
   ]
 }

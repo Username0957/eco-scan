@@ -7,17 +7,17 @@ export function Footer() {
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="flex items-center gap-2">
             <LeafIcon className="h-5 w-5 text-primary" />
-            <span className="font-semibold text-foreground">Plastigram</span>
+            <span className="font-semibold text-foreground">Plasticgram</span>
           </div>
 
           <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <span>Dibuat dengan</span>
+            <span>Made with</span>
             <HeartIcon className="h-4 w-4 text-primary" />
-            <span>untuk bumi yang lebih baik</span>
+            <span>for a better Earth</span>
           </div>
 
           <p className="text-xs text-muted-foreground">
-            &copy; {new Date().getFullYear()} Plastigram. Semua hak dilindungi.
+            &copy; {new Date().getFullYear()} Plasticgram. All rights reserved.
           </p>
         </div>
       </div>

@@ -8,94 +8,94 @@ const plasticCategories = [
   {
     code: "1",
     name: "PET (Polyethylene Terephthalate)",
-    examples: "Botol air mineral, botol minuman bersoda, wadah makanan",
+    examples: "Water bottles, soda bottles, food containers",
     recyclable: true,
-    risk: "Sedang",
-    decomposition: "450+ tahun",
-    tips: "Jangan gunakan ulang untuk makanan panas. Dapat didaur ulang menjadi serat tekstil.",
+    risk: "Medium",
+    decomposition: "450+ years",
+    tips: "Don't reuse for hot food. Can be recycled into textile fibers.",
   },
   {
     code: "2",
     name: "HDPE (High-Density Polyethylene)",
-    examples: "Botol susu, botol deterjen, kantong belanja",
+    examples: "Milk bottles, detergent bottles, shopping bags",
     recyclable: true,
-    risk: "Rendah",
-    decomposition: "100+ tahun",
-    tips: "Relatif aman untuk makanan. Pilihan plastik yang lebih baik untuk penggunaan sehari-hari.",
+    risk: "Low",
+    decomposition: "100+ years",
+    tips: "Relatively safe for food. Better choice for daily use.",
   },
   {
     code: "3",
     name: "PVC (Polyvinyl Chloride)",
-    examples: "Pipa, mainan, kemasan blister",
+    examples: "Pipes, toys, blister packaging",
     recyclable: false,
-    risk: "Tinggi",
-    decomposition: "450+ tahun",
-    tips: "Hindari untuk makanan. Mengandung klorin dan dapat melepaskan dioksin berbahaya.",
+    risk: "High",
+    decomposition: "450+ years",
+    tips: "Avoid for food. Contains chlorine and can release harmful dioxins.",
   },
   {
     code: "4",
     name: "LDPE (Low-Density Polyethylene)",
-    examples: "Kantong plastik, plastik wrap, botol squeeze",
+    examples: "Plastic bags, plastic wrap, squeeze bottles",
     recyclable: true,
-    risk: "Rendah",
-    decomposition: "500+ tahun",
-    tips: "Relatif aman tetapi sulit didaur ulang. Gunakan kembali sebisa mungkin.",
+    risk: "Low",
+    decomposition: "500+ years",
+    tips: "Relatively safe but difficult to recycle. Reuse as much as possible.",
   },
   {
     code: "5",
     name: "PP (Polypropylene)",
-    examples: "Wadah yogurt, sedotan, tutup botol",
+    examples: "Yogurt containers, straws, bottle caps",
     recyclable: true,
-    risk: "Rendah",
-    decomposition: "20-30 tahun",
-    tips: "Pilihan terbaik untuk wadah makanan. Tahan panas dan aman untuk microwave.",
+    risk: "Low",
+    decomposition: "20-30 years",
+    tips: "Best choice for food containers. Heat-resistant and microwave-safe.",
   },
   {
     code: "6",
     name: "PS (Polystyrene)",
-    examples: "Styrofoam, gelas plastik sekali pakai, wadah makanan take-away",
+    examples: "Styrofoam, disposable plastic cups, takeaway food containers",
     recyclable: false,
-    risk: "Tinggi",
-    decomposition: "500+ tahun",
-    tips: "Sangat berbahaya! Hindari untuk makanan panas. Mudah terurai menjadi mikroplastik.",
+    risk: "High",
+    decomposition: "500+ years",
+    tips: "Highly dangerous! Avoid for hot food. Easily breaks down into microplastics.",
   },
   {
     code: "7",
-    name: "Other (Lainnya)",
-    examples: "Galon air, botol bayi, CD/DVD",
+    name: "Other (Mixed)",
+    examples: "Water dispensers, baby bottles, CDs/DVDs",
     recyclable: false,
-    risk: "Sedang-Tinggi",
-    decomposition: "Bervariasi",
-    tips: "Berhati-hati dengan BPA. Pilih yang berlabel BPA-Free jika harus menggunakan.",
+    risk: "Medium-High",
+    decomposition: "Varies",
+    tips: "Be careful with BPA. Choose BPA-Free if you must use.",
   },
 ]
 
 const generalTips = [
   {
-    title: "Reduce (Kurangi)",
-    description: "Kurangi penggunaan plastik sekali pakai. Bawa tas belanja dan botol minum sendiri.",
+    title: "Reduce",
+    description: "Minimize single-use plastic. Bring your own shopping bags and water bottles.",
     icon: AlertTriangleIcon,
   },
   {
-    title: "Reuse (Gunakan Kembali)",
-    description: "Gunakan kembali wadah plastik untuk keperluan lain sebelum membuangnya.",
+    title: "Reuse",
+    description: "Use plastic containers for other purposes before discarding them.",
     icon: CheckCircleIcon,
   },
   {
-    title: "Recycle (Daur Ulang)",
-    description: "Pisahkan sampah plastik dan serahkan ke bank sampah atau tempat daur ulang.",
-    icon:  RecycleIcon,
+    title: "Recycle",
+    description: "Separate plastic waste and send it to recycling centers or waste banks.",
+    icon: RecycleIcon,
   },
 ]
 
 function getRiskBadgeColor(risk: string) {
   switch (risk) {
-    case "Rendah":
+    case "Low":
       return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400"
-    case "Sedang":
-    case "Sedang-Tinggi":
+    case "Medium":
+    case "Medium-High":
       return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400"
-    case "Tinggi":
+    case "High":
       return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
     default:
       return "bg-muted text-muted-foreground"
@@ -116,10 +116,10 @@ export default function EducationPage() {
                 <InfoIcon className="h-7 w-7 text-primary-foreground" />
               </div>
             </div>
-            <h1 className="mb-3 text-3xl font-bold text-foreground">Mode Edukasi</h1>
+            <h1 className="mb-3 text-3xl font-bold text-foreground">Education Mode</h1>
             <p className="text-muted-foreground leading-relaxed">
-              Pelajari berbagai jenis plastik, tingkat bahayanya, dan cara mengelolanya dengan bijak untuk menjaga
-              kelestarian lingkungan.
+              Learn about different types of plastic, their hazard levels, and how to manage them wisely to protect our
+              environment.
             </p>
           </div>
 
@@ -143,7 +143,7 @@ export default function EducationPage() {
 
           {/* Plastic Categories */}
           <div className="mb-8">
-            <h2 className="mb-6 text-xl font-bold text-foreground">Kategori Plastik</h2>
+            <h2 className="mb-6 text-xl font-bold text-foreground">Plastic Categories</h2>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {plasticCategories.map((category) => (
                 <Card key={category.code} className="overflow-hidden border-border/50">
@@ -159,19 +159,19 @@ export default function EducationPage() {
                   </CardHeader>
                   <CardContent className="p-4 space-y-3">
                     <div>
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Contoh:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Examples:</p>
                       <p className="text-sm text-foreground">{category.examples}</p>
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <Badge className={getRiskBadgeColor(category.risk)}>Risiko: {category.risk}</Badge>
+                      <Badge className={getRiskBadgeColor(category.risk)}>Risk: {category.risk}</Badge>
                       <Badge variant={category.recyclable ? "default" : "secondary"}>
-                        {category.recyclable ? "Dapat Didaur Ulang" : "Sulit Didaur Ulang"}
+                        {category.recyclable ? "Recyclable" : "Hard to Recycle"}
                       </Badge>
                     </div>
 
                     <div className="rounded-lg bg-muted/50 p-3">
-                      <p className="text-xs font-medium text-muted-foreground mb-1">Waktu Terurai:</p>
+                      <p className="text-xs font-medium text-muted-foreground mb-1">Decomposition Time:</p>
                       <p className="text-sm font-semibold text-foreground">{category.decomposition}</p>
                     </div>
 
@@ -189,33 +189,33 @@ export default function EducationPage() {
                 <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive">
                   <AlertTriangleIcon className="h-5 w-5 text-destructive-foreground" />
                 </div>
-                <CardTitle>Bahaya Mikroplastik</CardTitle>
+                <CardTitle>Microplastic Hazards</CardTitle>
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-muted-foreground leading-relaxed">
-                Mikroplastik adalah partikel plastik berukuran kurang dari 5mm yang terbentuk dari degradasi sampah
-                plastik. Partikel ini telah ditemukan di air minum, makanan laut, dan bahkan di udara yang kita hirup.
+                Microplastics are plastic particles smaller than 5mm formed from degradation of plastic waste. These
+                particles have been found in drinking water, seafood, and even the air we breathe.
               </p>
 
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="rounded-lg bg-card p-4">
-                  <h4 className="mb-2 font-medium text-foreground">Dampak pada Kesehatan:</h4>
+                  <h4 className="mb-2 font-medium text-foreground">Health Impacts:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground">
-                    <li>• Gangguan sistem endokrin</li>
-                    <li>• Peradangan kronis</li>
-                    <li>• Potensi karsinogenik</li>
-                    <li>• Akumulasi di organ tubuh</li>
+                    <li>• Disruption of endocrine system</li>
+                    <li>• Chronic inflammation</li>
+                    <li>• Potential carcinogenic effects</li>
+                    <li>• Accumulation in body organs</li>
                   </ul>
                 </div>
 
                 <div className="rounded-lg bg-card p-4">
-                  <h4 className="mb-2 font-medium text-foreground">Cara Mengurangi Paparan:</h4>
+                  <h4 className="mb-2 font-medium text-foreground">How to Reduce Exposure:</h4>
                   <ul className="space-y-1 text-sm text-muted-foreground">
-                    <li>• Hindari wadah plastik untuk makanan panas</li>
-                    <li>• Gunakan filter air</li>
-                    <li>• Pilih produk tanpa plastik</li>
-                    <li>• Kurangi konsumsi makanan kemasan</li>
+                    <li>• Avoid plastic containers for hot food</li>
+                    <li>• Use water filters</li>
+                    <li>• Choose plastic-free products</li>
+                    <li>• Reduce packaged food consumption</li>
                   </ul>
                 </div>
               </div>

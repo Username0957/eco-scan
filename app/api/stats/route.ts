@@ -10,7 +10,7 @@ export async function GET() {
       recentScans,
     })
   } catch (error) {
-    console.error("Stats API Error:", error)
-    return NextResponse.json({ error: "Gagal mengambil statistik" }, { status: 500 })
+    console.error("[v0] Stats API Error:", error)
+    return NextResponse.json({ error: "Failed to fetch statistics" }, { status: 500 })
   }
 }

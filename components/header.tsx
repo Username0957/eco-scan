@@ -7,9 +7,9 @@ import { ThemeToggle } from "@/components/theme-toggle"
 import { cn } from "@/lib/utils"
 
 const navItems = [
-  { href: "/", label: "Beranda", icon: HomeIcon },
-  { href: "/edukasi", label: "Edukasi", icon: BookOpenIcon },
-  { href: "/statistik", label: "Statistik", icon: BarChartIcon },
+  { href: "/", label: "Home", icon: HomeIcon },
+  { href: "/edukasi", label: "Education", icon: BookOpenIcon },
+  { href: "/statistik", label: "Statistics", icon: BarChartIcon },
 ]
 
 export function Header() {
@@ -22,7 +22,7 @@ export function Header() {
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
             <LeafIcon className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-xl font-bold text-foreground">Plastigram</span>
+          <span className="text-xl font-bold text-foreground">Plasticgram</span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1">

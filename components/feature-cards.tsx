@@ -4,33 +4,33 @@ import { ScanIcon, RecycleIcon, BookOpenIcon, BarChartIcon, ClockIcon, ShieldAle
 const features = [
   {
     icon: ScanIcon,
-    title: "Deteksi Multi-Objek",
-    description: "Identifikasi berbagai jenis sampah plastik sekaligus dalam satu foto",
+    title: "Multi-Object Detection",
+    description: "Identify various types of plastic waste simultaneously in a single photo",
   },
   {
     icon: ClockIcon,
-    title: "Estimasi Waktu Terurai",
-    description: "Ketahui berapa lama sampah plastik akan terurai di alam",
+    title: "Decomposition Time Estimate",
+    description: "Find out how long plastic waste will take to decompose in nature",
   },
   {
     icon: ShieldAlertIcon,
-    title: "Risiko Mikroplastik",
-    description: "Pahami tingkat bahaya mikroplastik dari setiap jenis plastik",
+    title: "Microplastic Risk",
+    description: "Understand the hazard level of microplastics from each type of plastic",
   },
   {
     icon: RecycleIcon,
-    title: "Alternatif Ramah Lingkungan",
-    description: "Dapatkan rekomendasi pengganti yang lebih eco-friendly",
+    title: "Eco-Friendly Alternatives",
+    description: "Get recommendations for substitutes that are more eco-friendly",
   },
   {
     icon: BookOpenIcon,
-    title: "Mode Edukasi",
-    description: "Pelajari kategori plastik dan dampaknya secara mendalam",
+    title: "Education Mode",
+    description: "Learn about plastic categories and their impacts in depth",
   },
   {
     icon: BarChartIcon,
-    title: "Statistik Lingkungan",
-    description: "Pantau kontribusi Anda dalam menjaga kelestarian bumi",
+    title: "Environmental Statistics",
+    description: "Track your contribution to Earth conservation",
   },
 ]
 

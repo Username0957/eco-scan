@@ -36,11 +36,11 @@ export default function StatisticsPage() {
     async function fetchStats() {
       try {
         const response = await fetch("/api/stats")
-        if (!response.ok) throw new Error("Gagal mengambil data")
+        if (!response.ok) throw new Error("Failed to fetch data")
         const data = await response.json()
         setStats(data.stats)
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Terjadi kesalahan")
+        setError(err instanceof Error ? err.message : "An error occurred")
       } finally {
         setLoading(false)
       }
@@ -67,7 +67,7 @@ export default function StatisticsPage() {
         <main className="flex flex-1 items-center justify-center">
           <div className="flex flex-col items-center gap-4">
             <LoaderIcon className="h-8 w-8 animate-spin text-primary" />
-            <p className="text-muted-foreground">Memuat statistik...</p>
+            <p className="text-muted-foreground">Loading statistics...</p>
           </div>
         </main>
         <Footer />
@@ -84,7 +84,7 @@ export default function StatisticsPage() {
             <CardContent className="pt-6 text-center">
               <p className="text-destructive">{error}</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Pastikan koneksi Firestore sudah dikonfigurasi dengan benar.
+                Make sure Firestore connection is configured correctly.
               </p>
             </CardContent>
           </Card>
@@ -105,8 +105,8 @@ export default function StatisticsPage() {
             <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
               <ChartIcon className="h-7 w-7 text-primary" />
             </div>
-            <h1 className="mb-2 text-3xl font-bold text-foreground md:text-4xl">Statistik Global</h1>
-            <p className="text-muted-foreground">Data analisis sampah dari seluruh pengguna Plastigram</p>
+            <h1 className="mb-2 text-3xl font-bold text-foreground md:text-4xl">Global Statistics</h1>
+            <p className="text-muted-foreground">Waste analysis data from all Plasticgram users</p>
           </div>
 
           {/* Summary Cards */}
@@ -117,7 +117,7 @@ export default function StatisticsPage() {
                   <RecycleIcon className="h-6 w-6 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Total Scan</p>
+                  <p className="text-sm text-muted-foreground">Total Scans</p>
                   <p className="text-2xl font-bold text-foreground">{stats?.totalScans?.toLocaleString() || 0}</p>
                 </div>
               </CardContent>
@@ -127,8 +127,8 @@ export default function StatisticsPage() {
           {/* Plastic Distribution Chart */}
           <Card className="border-border bg-card shadow-sm">
             <CardHeader>
-              <CardTitle>Distribusi Jenis Plastik</CardTitle>
-              <CardDescription>Persentase jenis plastik yang terdeteksi dari semua scan</CardDescription>
+              <CardTitle>Plastic Type Distribution</CardTitle>
+              <CardDescription>Percentage of plastic types detected from all scans</CardDescription>
             </CardHeader>
             <CardContent>
               {sortedCategories.length > 0 ? (
@@ -156,8 +156,8 @@ export default function StatisticsPage() {
               ) : (
                 <div className="py-12 text-center">
                   <RecycleIcon className="mx-auto mb-4 h-12 w-12 text-muted-foreground/50" />
-                  <p className="text-muted-foreground">Belum ada data statistik</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Mulai scan sampah untuk mengumpulkan data</p>
+                  <p className="text-muted-foreground">No statistics data yet</p>
+                  <p className="mt-1 text-sm text-muted-foreground">Start scanning waste to collect data</p>
                 </div>
               )}
             </CardContent>
@@ -166,7 +166,7 @@ export default function StatisticsPage() {
           {/* Last Update Info */}
           {stats?.lastUpdate && (
             <p className="mt-6 text-center text-sm text-muted-foreground">
-              Terakhir diperbarui: {new Date(stats.lastUpdate).toLocaleString("id-ID")}
+              Last updated: {new Date(stats.lastUpdate).toLocaleString("en-US")}
             </p>
           )}
         </div>

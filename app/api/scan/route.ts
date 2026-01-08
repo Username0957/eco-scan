@@ -8,13 +8,13 @@ const RATE_LIMIT_CONFIG = {
   windowMs: 60 * 1000,
 }
 
-const VISION_ANALYSIS_PROMPT = `Kamu adalah sistem klasifikasi sampah non-organik. Analisis gambar ini dan identifikasi semua objek sampah plastik/non-organik.
+const VISION_ANALYSIS_PROMPT = `You are a non-organic waste classification system. Analyze this image and identify all plastic/non-organic waste objects.
 
-Untuk setiap objek, berikan: nama, jenis plastik, kode (1-7), waktu terurai, risiko mikroplastik, alternatif ramah lingkungan, dan dampak lingkungan.
+For each object, provide: name, plastic type, code (1-7), decomposition time, microplastic risk, eco-friendly alternative, and environmental impact.
 
-Respons dalam format JSON:
+Response in JSON format:
 {
-  "objects": [{"name": "", "plasticType": "", "plasticCode": "", "decompositionTime": "", "microplasticRisk": "Rendah/Sedang/Tinggi", "ecoAlternative": "", "description": ""}],
+  "objects": [{"name": "", "plasticType": "", "plasticCode": "", "decompositionTime": "", "microplasticRisk": "Low/Medium/High", "ecoAlternative": "", "description": ""}],
   "education": {"title": "", "description": "", "tips": []}
 }`
 
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (!rateLimitResult.success) {
       return NextResponse.json(
         {
-          error: `Terlalu banyak permintaan. Silakan tunggu ${rateLimitResult.retryAfter} detik.`,
+          error: `Too many requests. Please wait ${rateLimitResult.retryAfter} seconds.`,
           retryAfter: rateLimitResult.retryAfter,
         },
         {
@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     const { visualDescription, estimatedObjects, confidence, thumbnailBase64, userId, useAI } = await request.json()
 
     if (!visualDescription && !thumbnailBase64) {
-      return NextResponse.json({ error: "Data gambar tidak ditemukan" }, { status: 400 })
+      return NextResponse.json({ error: "Image data not found" }, { status: 400 })
     }
 
     // Check cache
@@ -66,14 +66,14 @@ export async function POST(request: NextRequest) {
     }
 
     console.log("[v0] Using heuristic classification")
-    const basicResult = generateHeuristicResponse(estimatedObjects || ["sampah plastik"])
+    const basicResult = generateHeuristicResponse(estimatedObjects || ["plastic waste"])
     basicResult.provider = "heuristic"
     basicResult.analysisMode = "local"
 
     try {
       await Promise.all([saveScanResult(basicResult, userId), updateGlobalStats(basicResult)])
     } catch (firestoreError) {
-      console.error("Firestore error:", firestoreError)
+      console.error("[v0] Firestore error:", firestoreError)
     }
 
     setCachedResult(descHash, basicResult)
@@ -82,8 +82,8 @@ export async function POST(request: NextRequest) {
       headers: { "X-RateLimit-Remaining": String(rateLimitResult.remaining) },
     })
   } catch (error) {
-    console.error("Scan API Error:", error)
-    return NextResponse.json({ error: "Terjadi kesalahan saat memproses permintaan" }, { status: 500 })
+    console.error("[v0] Scan API Error:", error)
+    return NextResponse.json({ error: "Error processing request" }, { status: 500 })
   }
 }
 
@@ -94,126 +94,126 @@ function generateHeuristicResponse(estimatedObjects: string[]): ScanResult {
       plasticType: string
       plasticCode: string
       decompositionTime: string
-      microplasticRisk: "Rendah" | "Sedang" | "Tinggi"
+      microplasticRisk: "Low" | "Medium" | "High"
       ecoAlternative: string
       description: string
     }
   > = {
-    "botol plastik transparan": {
+    "clear plastic bottle": {
       plasticType: "PET (Polyethylene Terephthalate)",
       plasticCode: "1",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Botol kaca atau stainless steel",
+      decompositionTime: "450 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Glass or stainless steel bottle",
       description:
-        "PET dapat didaur ulang namun sering berakhir di lautan. Biasa digunakan untuk botol air mineral dan minuman ringan.",
+        "PET can be recycled but often ends up in oceans. Commonly used for mineral water and soft drink bottles.",
     },
-    "botol air mineral": {
+    "water bottle": {
       plasticType: "PET (Polyethylene Terephthalate)",
       plasticCode: "1",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Tumbler atau botol minum reusable",
+      decompositionTime: "450 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Reusable water bottle or tumbler",
       description:
-        "Salah satu penyumbang sampah plastik terbesar di Indonesia. Lebih dari 1 juta botol plastik terjual setiap menit di dunia.",
+        "One of the largest sources of plastic waste in the world. More than 1 million plastic bottles are sold every minute globally.",
     },
-    "botol plastik": {
+    "plastic bottle": {
       plasticType: "PET (Polyethylene Terephthalate)",
       plasticCode: "1",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Botol stainless steel atau kaca",
-      description: "Botol PET dapat didaur ulang menjadi serat tekstil, namun proses ini membutuhkan energi besar.",
+      decompositionTime: "450 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Stainless steel or glass bottle",
+      description: "PET bottles can be recycled into textile fibers, but the process requires significant energy.",
     },
-    "kantong plastik": {
+    "plastic bag": {
       plasticType: "LDPE (Low-Density Polyethylene)",
       plasticCode: "4",
-      decompositionTime: "500-1000 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Tas kain atau tas belanja reusable",
-      description: "Sangat berbahaya bagi kehidupan laut. Penyu sering mengira kantong plastik sebagai ubur-ubur.",
+      decompositionTime: "500-1000 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Cloth or reusable shopping bag",
+      description: "Highly harmful to marine life. Turtles often mistake plastic bags for jellyfish.",
     },
-    kresek: {
+    "shopping bag": {
       plasticType: "LDPE (Low-Density Polyethylene)",
       plasticCode: "4",
-      decompositionTime: "500-1000 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Tas belanja kain atau jaring",
-      description: "Rata-rata kantong plastik hanya digunakan 12 menit tapi butuh ratusan tahun untuk terurai.",
+      decompositionTime: "500-1000 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Reusable fabric or mesh bag",
+      description: "Average plastic bag is used for only 12 minutes but takes hundreds of years to decompose.",
     },
-    "wadah plastik putih": {
+    "white plastic container": {
       plasticType: "PP (Polypropylene)",
       plasticCode: "5",
-      decompositionTime: "20-30 tahun",
-      microplasticRisk: "Sedang",
-      ecoAlternative: "Wadah kaca atau stainless steel",
-      description: "Relatif aman untuk makanan panas, tapi tetap perlu didaur ulang dengan benar.",
+      decompositionTime: "20-30 years",
+      microplasticRisk: "Medium",
+      ecoAlternative: "Glass or stainless steel container",
+      description: "Relatively safe for hot food, but still needs proper recycling.",
     },
-    "tutup botol": {
+    "bottle cap": {
       plasticType: "HDPE (High-Density Polyethylene)",
       plasticCode: "2",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Rendah",
-      ecoAlternative: "Tutup botol berbahan bambu atau logam",
-      description: "Dapat didaur ulang dengan baik. Pisahkan dari botol saat mendaur ulang.",
+      decompositionTime: "450 years",
+      microplasticRisk: "Low",
+      ecoAlternative: "Bamboo or metal bottle cap",
+      description: "Can be recycled well. Separate from bottle when recycling.",
     },
-    sedotan: {
+    straw: {
       plasticType: "PP (Polypropylene)",
       plasticCode: "5",
-      decompositionTime: "200 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Sedotan bambu, stainless steel, atau kertas",
+      decompositionTime: "200 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Bamboo, stainless steel, or paper straw",
       description:
-        "Sering ditemukan di perut hewan laut dan burung. Lebih dari 8 miliar sedotan mencemari pantai dunia.",
+        "Commonly found in marine animal stomachs and bird digestive systems. Over 8 billion straws pollute world beaches annually.",
     },
-    "gelas plastik": {
+    "plastic cup": {
       plasticType: "PP (Polypropylene)",
       plasticCode: "5",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Sedang",
-      ecoAlternative: "Gelas kaca atau tumbler reusable",
-      description: "Banyak digunakan untuk minuman takeaway. Bawa tumbler sendiri untuk mengurangi sampah.",
+      decompositionTime: "450 years",
+      microplasticRisk: "Medium",
+      ecoAlternative: "Reusable glass or metal tumbler",
+      description: "Widely used for takeaway beverages. Bring your own tumbler to reduce waste.",
     },
-    "cup plastik": {
+    "foam cup": {
       plasticType: "PP (Polypropylene)",
       plasticCode: "5",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Sedang",
-      ecoAlternative: "Tumbler atau gelas reusable",
-      description: "Cup plastik sekali pakai berkontribusi besar pada sampah perkotaan.",
+      decompositionTime: "450 years",
+      microplasticRisk: "Medium",
+      ecoAlternative: "Reusable tumbler or paper cup",
+      description: "Single-use foam cups contribute significantly to urban waste.",
     },
     styrofoam: {
       plasticType: "PS (Polystyrene)",
       plasticCode: "6",
-      decompositionTime: "500-1000 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Wadah kertas atau daun pisang",
+      decompositionTime: "500-1000 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Paper or bamboo container",
       description:
-        "Sangat berbahaya karena mudah pecah menjadi jutaan partikel mikroplastik yang mencemari tanah dan air.",
+        "Highly dangerous as it easily breaks into millions of microplastic particles that contaminate soil and water.",
     },
-    "galon air": {
+    "water dispenser": {
       plasticType: "PC (Polycarbonate)",
       plasticCode: "7",
-      decompositionTime: "500+ tahun",
-      microplasticRisk: "Sedang",
-      ecoAlternative: "Galon kaca atau sistem refill",
-      description: "Dapat digunakan ulang berkali-kali. Pastikan galon dalam kondisi baik dan tidak tergores.",
+      decompositionTime: "500+ years",
+      microplasticRisk: "Medium",
+      ecoAlternative: "Water dispenser with glass or recycling system",
+      description: "Can be reused multiple times. Ensure the dispenser is in good condition without scratches.",
     },
-    "plastik wrap": {
+    "plastic wrap": {
       plasticType: "LDPE (Low-Density Polyethylene)",
       plasticCode: "4",
-      decompositionTime: "450 tahun",
-      microplasticRisk: "Sedang",
-      ecoAlternative: "Beeswax wrap atau tutup silikon",
-      description: "Sulit didaur ulang karena tipis dan sering terkontaminasi makanan.",
+      decompositionTime: "450 years",
+      microplasticRisk: "Medium",
+      ecoAlternative: "Beeswax wrap or silicone lid",
+      description: "Difficult to recycle because it is thin and often contaminated with food.",
     },
-    "kemasan snack": {
+    "food packaging": {
       plasticType: "Other (Multilayer)",
       plasticCode: "7",
-      decompositionTime: "100-500 tahun",
-      microplasticRisk: "Tinggi",
-      ecoAlternative: "Snack dalam kemasan kertas atau bawa wadah sendiri",
-      description: "Kemasan multilayer sangat sulit didaur ulang karena terdiri dari berbagai lapisan material.",
+      decompositionTime: "100-500 years",
+      microplasticRisk: "High",
+      ecoAlternative: "Paper packaging or bring your own container",
+      description: "Multilayer packaging is very difficult to recycle due to its composite structure.",
     },
   }
 
@@ -227,28 +227,27 @@ function generateHeuristicResponse(estimatedObjects: string[]): ScanResult {
     // Enhanced default response
     return {
       name: obj,
-      plasticType: "Plastik Campuran",
+      plasticType: "Mixed Plastic",
       plasticCode: "7",
-      decompositionTime: "100-500 tahun",
-      microplasticRisk: "Sedang" as const,
-      ecoAlternative: "Pilih alternatif ramah lingkungan yang dapat digunakan ulang",
-      description:
-        "Jenis plastik tidak teridentifikasi dengan pasti. Sebaiknya kurangi penggunaan dan daur ulang jika memungkinkan.",
+      decompositionTime: "100-500 years",
+      microplasticRisk: "Medium" as const,
+      ecoAlternative: "Choose eco-friendly alternatives that can be reused",
+      description: "Plastic type not clearly identified. It is best to reduce use and recycle if possible.",
     }
   })
 
   return {
     objects,
     education: {
-      title: "Tips Pengelolaan Sampah Plastik",
+      title: "Plastic Waste Management Tips",
       description:
-        "Hasil analisis berdasarkan deteksi visual heuristic. Sistem mengidentifikasi jenis plastik berdasarkan karakteristik visual objek.",
+        "Analysis based on heuristic visual detection. System identifies plastic types based on visual characteristics of objects.",
       tips: [
-        "Pisahkan sampah berdasarkan kode plastiknya (1-7)",
-        "Cuci bersih wadah plastik sebelum didaur ulang",
-        "Kurangi penggunaan plastik sekali pakai",
-        "Pilih produk dengan kemasan yang dapat didaur ulang",
-        "Bawa tas belanja dan wadah sendiri saat berbelanja",
+        "Separate waste by plastic code (1-7)",
+        "Rinse plastic containers before recycling",
+        "Reduce single-use plastic consumption",
+        "Choose products with recyclable packaging",
+        "Bring your own bags and containers when shopping",
       ],
     },
     totalObjects: objects.length,

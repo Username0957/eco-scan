@@ -25,11 +25,11 @@ export default function ThankYouPage() {
               </div>
             </div>
 
-            <h1 className="mb-4 text-3xl font-bold text-foreground">Terima Kasih!</h1>
+            <h1 className="mb-4 text-3xl font-bold text-foreground">Thank You!</h1>
 
             <p className="mb-8 text-lg text-muted-foreground leading-relaxed">
-              Anda telah berkontribusi dalam menjaga kelestarian bumi. Setiap langkah kecil membuat perbedaan besar
-              untuk masa depan planet kita.
+              You have contributed to protecting our planet. Every small step makes a big difference for the future of
+              our world.
             </p>
 
             {/* Quote Card */}
@@ -39,9 +39,9 @@ export default function ThankYouPage() {
                   وَلَا تُفْسِدُوْا فِى الْاَرْضِ بَعْدَ اِصْلَاحِهَا
                 </p>
                 <p className="text-sm italic text-muted-foreground">
-                  &quot;Janganlah kamu berbuat kerusakan di bumi setelah diatur dengan baik.&quot;
+                  &quot;Do not cause corruption on Earth after it has been set in order.&quot;
                 </p>
-                <p className="mt-1 text-xs font-medium text-primary">— QS. Al-A&apos;raf: 56</p>
+                <p className="mt-1 text-xs font-medium text-primary">— Quran 7:56</p>
               </CardContent>
             </Card>
 
@@ -50,38 +50,38 @@ export default function ThankYouPage() {
               <Button asChild size="lg" className="gap-2">
                 <Link href="/">
                   <HomeIcon className="h-4 w-4" />
-                  Kembali ke Beranda
+                  Back to Home
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2 bg-transparent">
                 <Link href="/edukasi">
                   <BookOpenIcon className="h-4 w-4" />
-                  Mode Edukasi
+                  Education Mode
                 </Link>
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2 bg-transparent">
                 <Link href="/statistik">
                   <BarChartIcon className="h-4 w-4" />
-                  Lihat Statistik
+                  View Statistics
                 </Link>
               </Button>
             </div>
 
             {/* Social Impact Message */}
             <div className="mt-10 rounded-2xl bg-secondary/50 p-6">
-              <h3 className="mb-3 font-semibold text-foreground">Dampak Positif Anda</h3>
+              <h3 className="mb-3 font-semibold text-foreground">Your Positive Impact</h3>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold text-primary">1</p>
-                  <p className="text-xs text-muted-foreground">Scan Hari Ini</p>
+                  <p className="text-xs text-muted-foreground">Scan Today</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-primary">∞</p>
-                  <p className="text-xs text-muted-foreground">Potensi Dampak</p>
+                  <p className="text-xs text-muted-foreground">Potential Impact</p>
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-primary">100%</p>
-                  <p className="text-xs text-muted-foreground">Komitmen</p>
+                  <p className="text-xs text-muted-foreground">Commitment</p>
                 </div>
               </div>
             </div>

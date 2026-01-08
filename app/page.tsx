@@ -1,6 +1,6 @@
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
-import  { UploadSection }  from "@/components/upload-section"
+import { UploadSection } from "@/components/upload-section"
 import { FeatureCards } from "@/components/feature-cards"
 import { LeafIcon, EarthIcon, RecycleIcon } from "@/components/icons"
 
@@ -21,28 +21,28 @@ export default function HomePage() {
               </div>
 
               <h1 className="mb-4 text-4xl font-bold tracking-tight text-foreground md:text-5xl text-balance">
-                Kenali Sampahmu,
+                Identify Your Waste,
                 <br />
-                Selamatkan Bumi
+                Save the Earth
               </h1>
 
               <p className="mb-8 text-lg text-muted-foreground leading-relaxed text-pretty">
-                Plastigram membantu Anda mengidentifikasi jenis sampah plastik, memahami bahaya mikroplastik, dan menemukan
-                alternatif ramah lingkungan dengan teknologi canggih.
+                Plasticgram helps you identify types of plastic waste, understand microplastic hazards, and discover
+                eco-friendly alternatives with advanced technology.
               </p>
 
               <div className="flex flex-wrap justify-center gap-4 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <EarthIcon className="h-5 w-5 text-primary" />
-                  <span>Analisis</span>
+                  <span>Analysis</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <RecycleIcon className="h-5 w-5 text-primary" />
-                  <span>Multi-Objek</span>
+                  <span>Multi-Object</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <LeafIcon className="h-5 w-5 text-primary" />
-                  <span>Edukasi Lengkap</span>
+                  <span>Complete Education</span>
                 </div>
               </div>
             </div>
@@ -64,9 +64,9 @@ export default function HomePage() {
         <section className="bg-secondary/30 py-12 md:py-16">
           <div className="container mx-auto px-4">
             <div className="mx-auto mb-10 max-w-2xl text-center">
-              <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">Fitur Unggulan</h2>
+              <h2 className="mb-3 text-2xl font-bold text-foreground md:text-3xl">Featured Features</h2>
               <p className="text-muted-foreground">
-                Teknologi canggih untuk membantu Anda memahami dan mengelola sampah dengan lebih baik
+                Advanced technology to help you understand and manage waste better
               </p>
             </div>
             <FeatureCards />
@@ -81,11 +81,10 @@ export default function HomePage() {
                 وَلَا تُفْسِدُوْا فِى الْاَرْضِ بَعْدَ اِصْلَاحِهَا وَادْعُوْهُ خَوْفًا وَّطَمَعًاۗ اِنَّ رَحْمَتَ اللّٰهِ قَرِيْبٌ مِّنَ الْمُحْسِنِيْنَ
               </p>
               <p className="text-sm italic text-muted-foreground">
-                &quot;Janganlah kamu berbuat kerusakan di bumi setelah diatur dengan baik. Berdoalah kepada-Nya dengan
-                rasa takut dan penuh harap. Sesungguhnya rahmat Allah sangat dekat dengan orang-orang yang berbuat
-                baik.&quot;
+                &quot;Do not cause corruption on Earth after it has been set in order. Call upon Him in fear and hope.
+                Indeed, the mercy of Allah is near to those who do good.&quot;
               </p>
-              <p className="mt-2 text-xs font-medium text-primary">— QS. Al-A&apos;raf: 56</p>
+              <p className="mt-2 text-xs font-medium text-primary">— Quran 7:56</p>
             </div>
           </div>
         </section>

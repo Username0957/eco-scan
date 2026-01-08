@@ -9,12 +9,12 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 
 export const metadata: Metadata = {
-  title: "Plastigram - Sistem Analisis Sampah Plastik",
+  title: "Plasticgram - Plastic Waste Analysis System",
   description:
-    "Identifikasi jenis sampah plastik, pahami bahaya mikroplastik, dan temukan alternatif ramah lingkungan dengan teknologi AI.",
-  keywords: ["eco", "scan", "sampah", "plastik", "AI", "lingkungan", "daur ulang", "mikroplastik"],
-  authors: [{ name: "Plastigram Team" }],
-  
+    "Identify types of plastic waste, understand microplastic hazards, and discover eco-friendly alternatives with advanced AI technology.",
+  keywords: ["eco", "scan", "plastic", "waste", "AI", "environment", "recycling", "microplastics"],
+  authors: [{ name: "Plasticgram Team" }],
+    generator: 'v0.app'
 }
 
 export const viewport: Viewport = {
@@ -32,7 +32,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           {children}
