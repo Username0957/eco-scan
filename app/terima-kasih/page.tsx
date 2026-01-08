@@ -2,7 +2,6 @@ import Link from "next/link"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent } from "@/components/ui/card"
 import { HeartIcon, LeafIcon, HomeIcon, BookOpenIcon, BarChartIcon } from "@/components/icons"
 
 export default function ThankYouPage() {
@@ -31,19 +30,6 @@ export default function ThankYouPage() {
               You have contributed to protecting our planet. Every small step makes a big difference for the future of
               our world.
             </p>
-
-            {/* Quote Card */}
-            <Card className="mb-8 border-primary/20 bg-primary/5">
-              <CardContent className="p-6">
-                <p className="mb-2 font-arabic text-lg text-foreground" dir="rtl">
-                  وَلَا تُفْسِدُوْا فِى الْاَرْضِ بَعْدَ اِصْلَاحِهَا
-                </p>
-                <p className="text-sm italic text-muted-foreground">
-                  &quot;Do not cause corruption on Earth after it has been set in order.&quot;
-                </p>
-                <p className="mt-1 text-xs font-medium text-primary">— Quran 7:56</p>
-              </CardContent>
-            </Card>
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
