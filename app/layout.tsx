@@ -14,7 +14,6 @@ export const metadata: Metadata = {
     "Identify types of plastic waste, understand microplastic hazards, and discover eco-friendly alternatives with advanced AI technology.",
   keywords: ["eco", "scan", "plastic", "waste", "AI", "environment", "recycling", "microplastics"],
   authors: [{ name: "Plasticgram Team" }],
-    generator: 'v0.app'
 }
 
 export const viewport: Viewport = {
