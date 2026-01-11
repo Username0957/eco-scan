@@ -1,12 +1,3 @@
-/* =========================================================
-   HEURISTIC + TEACHABLE MACHINE HYBRID CLASSIFIER (FINAL)
-   =========================================================
-   - Offline-first
-   - No cloud AI dependency
-   - Teachable Machine = heuristic signal (NOT decision maker)
-   - Designed for eco-education app
-========================================================= */
-
 import * as tmImage from "@teachablemachine/image"
 
 /* =======================

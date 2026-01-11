@@ -1,4 +1,4 @@
-type DetectedObject = {
+export type DetectedObject = {
   name: string
   plasticType: string
   plasticCode: string

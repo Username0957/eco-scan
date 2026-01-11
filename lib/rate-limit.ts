@@ -1,6 +1,3 @@
-// Simple in-memory rate limiter
-// In production, use Redis (Upstash) for distributed rate limiting
-
 interface RateLimitEntry {
   count: number
   resetTime: number

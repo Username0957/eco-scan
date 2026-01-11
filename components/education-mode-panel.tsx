@@ -1,26 +1,30 @@
-// Education Mode Panel Component
-// Shows educational content when toggle is ON
+"use client";
 
-"use client"
-
-import * as React from "react"
-import { InfoIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import type { DetectedObject } from "@/lib/types"
+import * as React from "react";
+import { InfoIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import type { DetectedObject } from "@/lib/types";
 
 interface EducationModePanelProps {
-  object: DetectedObject
-  isOpen?: boolean
+  object: DetectedObject;
+  isOpen?: boolean;
 }
 
-export function EducationModePanel({ object, isOpen = false }: EducationModePanelProps) {
-  const [expanded, setExpanded] = React.useState(isOpen)
+export function EducationModePanel({
+  object,
+  isOpen = false,
+}: EducationModePanelProps) {
+  const [expanded, setExpanded] = React.useState(isOpen);
 
   const educationContent = {
     whyHarmful: getWhyHarmful(object.plasticCode, object.microplasticRisk),
-    decompositionExplained: getDecompositionExplanation(object.decompositionTime),
-    microplasticRiskExplained: getMicroplasticExplanation(object.microplasticRisk),
+    decompositionExplained: getDecompositionExplanation(
+      object.decompositionTime
+    ),
+    microplasticRiskExplained: getMicroplasticExplanation(
+      object.microplasticRisk
+    ),
     alternatives: getAlternatives(object.plasticCode),
-  }
+  };
 
   return (
     <div className="rounded-lg border border-primary/30 bg-primary/5">
@@ -45,25 +49,42 @@ export function EducationModePanel({ object, isOpen = false }: EducationModePane
       {expanded && (
         <div className="space-y-4 border-t border-primary/20 p-4">
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Mengapa Plastik Ini Berbahaya?</h4>
-            <p className="text-sm text-muted-foreground">{educationContent.whyHarmful}</p>
+            <h4 className="mb-2 text-sm font-semibold text-foreground">
+              Mengapa Plastik Ini Berbahaya?
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {educationContent.whyHarmful}
+            </p>
           </div>
 
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Waktu Dekomposisi</h4>
-            <p className="text-sm text-muted-foreground">{educationContent.decompositionExplained}</p>
+            <h4 className="mb-2 text-sm font-semibold text-foreground">
+              Waktu Dekomposisi
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {educationContent.decompositionExplained}
+            </p>
           </div>
 
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Risiko Mikroplastik</h4>
-            <p className="text-sm text-muted-foreground">{educationContent.microplasticRiskExplained}</p>
+            <h4 className="mb-2 text-sm font-semibold text-foreground">
+              Risiko Mikroplastik
+            </h4>
+            <p className="text-sm text-muted-foreground">
+              {educationContent.microplasticRiskExplained}
+            </p>
           </div>
 
           <div>
-            <h4 className="mb-2 text-sm font-semibold text-foreground">Alternatif Ramah Lingkungan</h4>
+            <h4 className="mb-2 text-sm font-semibold text-foreground">
+              Alternatif Ramah Lingkungan
+            </h4>
             <ul className="space-y-2">
               {educationContent.alternatives.map((alt, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-sm text-muted-foreground">
+                <li
+                  key={idx}
+                  className="flex items-start gap-2 text-sm text-muted-foreground"
+                >
                   <span className="mt-0.5 text-primary">✓</span>
                   <span>{alt}</span>
                 </li>
@@ -73,7 +94,7 @@ export function EducationModePanel({ object, isOpen = false }: EducationModePane
         </div>
       )}
     </div>
-  )
+  );
 }
 
 function getWhyHarmful(code: string, risk: string): string {
@@ -85,21 +106,22 @@ function getWhyHarmful(code: string, risk: string): string {
     "5": "PP relatif lebih aman namun tetap mencemari lingkungan. Sedotan dan tutup botol PP sering tertelan hewan laut.",
     "6": "Styrofoam (PS) sangat ringan sehingga mudah terbang dan mencemari lingkungan. Sangat mudah pecah menjadi mikroplastik yang berbahaya.",
     "7": "Plastik campuran sangat sulit didaur ulang karena terdiri dari berbagai jenis plastik. Biasanya berakhir di TPA atau dibakar.",
-  }
+  };
   return (
-    explanations[code] || "Plastik ini memiliki dampak negatif terhadap lingkungan jika tidak dikelola dengan baik."
-  )
+    explanations[code] ||
+    "Plastik ini memiliki dampak negatif terhadap lingkungan jika tidak dikelola dengan baik."
+  );
 }
 
 function getDecompositionExplanation(time: string): string {
   if (time.includes("1000")) {
-    return `${time} adalah waktu yang sangat lama - lebih dari 40 generasi manusia! Bayangkan, plastik yang Anda buang hari ini akan tetap ada hingga cicit-cicit Anda dewasa.`
+    return `${time} adalah waktu yang sangat lama - lebih dari 40 generasi manusia! Bayangkan, plastik yang Anda buang hari ini akan tetap ada hingga cicit-cicit Anda dewasa.`;
   } else if (time.includes("500")) {
-    return `${time} berarti plastik ini akan bertahan lebih lama dari usia rata-rata manusia. Plastik yang Anda buang hari ini akan outlive anak cucu Anda.`
+    return `${time} berarti plastik ini akan bertahan lebih lama dari usia rata-rata manusia. Plastik yang Anda buang hari ini akan outlive anak cucu Anda.`;
   } else if (time.includes("450")) {
-    return `${time} - hampir setengah milenium! Ini berarti plastik dari zaman Columbus masih ada hingga sekarang jika mereka menggunakannya.`
+    return `${time} - hampir setengah milenium! Ini berarti plastik dari zaman Columbus masih ada hingga sekarang jika mereka menggunakannya.`;
   }
-  return `Waktu dekomposisi ${time} menunjukkan plastik ini akan bertahan sangat lama di lingkungan.`
+  return `Waktu dekomposisi ${time} menunjukkan plastik ini akan bertahan sangat lama di lingkungan.`;
 }
 
 function getMicroplasticExplanation(risk: string): string {
@@ -110,8 +132,11 @@ function getMicroplasticExplanation(risk: string): string {
       "Plastik ini dapat menghasilkan mikroplastik seiring waktu, terutama saat terkena sinar matahari dan gesekan. Mikroplastik dapat membawa bahan kimia berbahaya dan dimakan oleh hewan.",
     Rendah:
       "Meskipun risikonya lebih rendah, plastik ini tetap dapat menghasilkan mikroplastik dalam jangka panjang. Lebih baik didaur ulang atau diganti dengan alternatif non-plastik.",
-  }
-  return explanations[risk] || "Risiko mikroplastik perlu diperhatikan untuk menjaga kesehatan lingkungan."
+  };
+  return (
+    explanations[risk] ||
+    "Risiko mikroplastik perlu diperhatikan untuk menjaga kesehatan lingkungan."
+  );
 }
 
 function getAlternatives(code: string): string[] {
@@ -136,7 +161,11 @@ function getAlternatives(code: string): string[] {
       "Tas belanja dari bahan daur ulang",
       "Beeswax wrap sebagai pengganti plastik wrap",
     ],
-    "5": ["Sedotan stainless steel atau bambu", "Wadah kaca untuk makanan panas", "Tutup botol dari logam atau kayu"],
+    "5": [
+      "Sedotan stainless steel atau bambu",
+      "Wadah kaca untuk makanan panas",
+      "Tutup botol dari logam atau kayu",
+    ],
     "6": [
       "Wadah makanan dari daun pisang atau bambu",
       "Kotak makan dari stainless steel",
@@ -147,11 +176,11 @@ function getAlternatives(code: string): string[] {
       "Pilih produk dengan kode 2 atau 5 jika harus plastik",
       "Prioritaskan produk tanpa kemasan",
     ],
-  }
+  };
   return (
     alternatives[code] || [
       "Gunakan alternatif non-plastik sebisa mungkin",
       "Daur ulang dengan benar jika harus menggunakan plastik",
     ]
-  )
+  );
 }

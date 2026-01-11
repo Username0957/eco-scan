@@ -1,6 +1,3 @@
-// Utility to compress image on server side
-// This reduces the size of base64 image before sending to AI
-
 export function getImageSizeInKB(base64: string): number {
   // Remove data URL prefix if present
   const base64Data = base64.split(",")[1] || base64

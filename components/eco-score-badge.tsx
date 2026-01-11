@@ -1,5 +1,3 @@
-// Eco Score Badge Component
-// Visual representation of environmental impact score
 
 "use client"
 import { LeafIcon } from "lucide-react"

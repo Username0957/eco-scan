@@ -1,5 +1,3 @@
-// Client-side vision analysis using Canvas API
-
 export interface ClientVisionResult {
   visualDescription: string
   dominantColors: string[]

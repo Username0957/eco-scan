@@ -1,5 +1,4 @@
-// Eco Score calculation for educational purposes (not gamification)
-// Scores based on environmental impact
+
 
 import type { DetectedObject } from "./types"
 

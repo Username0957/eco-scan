@@ -1,6 +1,3 @@
-// Local Vision Analyzer - Ekstrak fitur visual dari gambar tanpa AI cloud
-// Ini mengurangi penggunaan token dengan mengkonversi gambar menjadi deskripsi teks
-
 export interface VisualFeatures {
   dominantColors: { color: string; percentage: number }[]
   brightness: "dark" | "medium" | "bright"
